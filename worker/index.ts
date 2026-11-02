@@ -55,8 +55,12 @@ async function upload(req: Request, env: Env, url: URL): Promise<Response> {
   let bin = '';
   for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   const name = url.searchParams.get('name') ?? 'Image';
-  const result = await stub(env, t.session).call('apply', { ops: [{ op: 'addImage', url: `data:${type};base64,${btoa(bin)}`, name }], view: false });
-  return json(result);
+  try {
+    return json(await stub(env, t.session).call('apply', { ops: [{ op: 'addImage', url: `data:${type};base64,${btoa(bin)}`, name }], view: false }));
+  } catch (e) {
+    // The tab may have closed since the link was made, so the error says what to do rather than failing with a bare 500.
+    return json({ error: e instanceof Error ? e.message : String(e) }, 409);
+  }
 }
 
 export default {
