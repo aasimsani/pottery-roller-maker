@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Settings } from '../state';
+import { nozzleSettings, type Settings } from '../state';
 import { usePersistent } from '../state';
 import { widestD } from '../scale';
 import { BED_MARGIN } from '../checks';
@@ -99,6 +99,7 @@ const USE_DEFAULTS = { texture: { depth: 1.2, soften: 0.3 }, underglaze: { depth
 
 export function Controls({ s, set, result, onPhoto, onScale }: { s: Settings; set: Set; result: RollerResult | null; onPhoto: () => void; onScale: (k: number) => void }) {
   const S = surfaceLength(s.piece), b = s.build, setB = (patch: Partial<DrumBuild>) => set('build', { ...b, ...patch });
+  const setNozzle = (n: number) => { for (const [k, v] of Object.entries(nozzleSettings(n))) set(k as keyof Settings, v as never); };
   const r = result?.roller, other = b.kind === 'hollow' ? `solid at ${Math.round(b.infill * 100)}% infill` : 'hollow';
   return (
     <aside className="panel controls" aria-label="Pot and roller settings">
@@ -130,6 +131,15 @@ export function Controls({ s, set, result, onPhoto, onScale }: { s: Settings; se
       </Section>
 
       <Section title="Print">
+        <NumberField label="Nozzle" unit="mm" value={s.nozzle} min={0.1} max={1.2} step={0.05} onChange={setNozzle} />
+        <div className="seg" role="group" aria-label="Common nozzles">
+          {[0.2, 0.4, 0.6].map((n) => (
+            <button key={n} className={s.nozzle === n ? 'on' : ''} aria-pressed={s.nozzle === n} onClick={() => setNozzle(n)}>{n} mm</button>
+          ))}
+        </div>
+        <p className="hint">The roller prints standing on its end, so the nozzle sets the detail round the roller and the layer height sets it along the length.
+          {' '}Use {s.nozzle <= 0.25 ? '0.08–0.12' : s.nozzle <= 0.45 ? '0.12–0.16' : '0.2–0.28'} mm layers. Raised lines and gaps need {nozzleSettings(s.nozzle).minPlastic} mm or more.
+          {s.nozzle <= 0.25 ? ' A 0.2 mm nozzle prints about four times slower, so save it for fine patterns.' : ''}</p>
         <SelectField label="Inside" value={b.kind} onChange={(kind) => setB({ kind })}
           options={[['hollow', 'hollow, spokes at the ends'], ['solid', 'solid, sparse infill']]} />
         {b.kind === 'hollow' ? (
@@ -162,12 +172,10 @@ export function Controls({ s, set, result, onPhoto, onScale }: { s: Settings; se
         </Section>
 
         <Section title="Print check">
-          <NumberField label="Nozzle" unit="mm" value={s.nozzle} min={0.1} max={1.2} step={0.05}
-            onChange={(v) => { set('nozzle', v); set('minPlastic', Math.round(v * 20) / 10); set('minHole', Math.round(v * 20) / 10); }} />
           <NumberField label="Thinnest raised line" unit="mm" value={s.minPlastic} min={0.2} max={5} step={0.1} onChange={(v) => set('minPlastic', v)} />
           <NumberField label="Narrowest gap" unit="mm" value={s.minHole} min={0.2} max={5} step={0.1} onChange={(v) => set('minHole', v)} />
           <CheckField label="Hold back the STL while the check finds errors" value={s.strict} onChange={(v) => set('strict', v)} />
-          <p className="hint">Two nozzle widths is the practical minimum for both. Changing the nozzle resets them to that.</p>
+          <p className="hint">Two nozzle widths is the practical minimum for both. Changing the nozzle under Print resets them, and the detail, to suit it.</p>
         </Section>
 
         <Section title="Printer">

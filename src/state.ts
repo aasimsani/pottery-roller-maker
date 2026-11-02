@@ -45,6 +45,13 @@ export const DEFAULTS: Settings = {
   paintColor: '#2b4c8c',
 };
 
+// nozzleSettings() fits the print check and the detail to a nozzle. Two line widths is the practical
+// minimum for a raised line or a gap, and the pattern and the mesh only need to be a little finer than one line.
+export function nozzleSettings(nozzle: number): Pick<Settings, 'nozzle' | 'minPlastic' | 'minHole' | 'res' | 'cell'> {
+  const min = Math.round(nozzle * 20) / 10, fine = nozzle <= 0.25, normal = nozzle <= 0.45;
+  return { nozzle, minPlastic: min, minHole: min, res: fine ? 0.1 : normal ? 0.15 : 0.25, cell: fine ? 0.25 : normal ? 0.4 : 0.8 };
+}
+
 // settingsFrom() fills saved settings in with defaults, including any drum-build fields added since they were saved.
 export function settingsFrom(saved: Record<string, unknown> | null): Settings {
   const s = { ...DEFAULTS, ...(saved ?? {}) } as Settings;

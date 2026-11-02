@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { DEFAULTS, settingsFrom } from './state';
+import { DEFAULTS, nozzleSettings, settingsFrom } from './state';
 
 test('saved settings keep their piece and fill in anything missing, including the drum build', () => {
   const piece = { name: 'Tall mug', profile: [{ z: 0, d: 70 }, { z: 120, d: 74 }] };
@@ -11,4 +11,10 @@ test('saved settings keep their piece and fill in anything missing, including th
 
 test('nothing saved gives the defaults', () => {
   expect(settingsFrom(null)).toEqual(DEFAULTS);
+});
+
+test('a nozzle sets the minimum widths to two line widths, and the detail to match', () => {
+  expect(nozzleSettings(0.2)).toEqual({ nozzle: 0.2, minPlastic: 0.4, minHole: 0.4, res: 0.1, cell: 0.25 });
+  expect(nozzleSettings(0.4)).toMatchObject({ minPlastic: 0.8, minHole: 0.8, res: 0.15, cell: 0.4 });
+  expect(nozzleSettings(0.8)).toMatchObject({ minPlastic: 1.6, res: 0.25, cell: 0.8 });
 });
