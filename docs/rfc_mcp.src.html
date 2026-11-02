@@ -38,10 +38,10 @@
     <div data-tone="med"><dt>Browser-tool steps per tweak today</dt><dd><span class="claim" data-evidence="guess">5–10</span></dd></div>
   </dl>
   <figure class="diagram">
-    <svg viewBox="0 0 760 250" role="img" aria-label="The design loop: look, judge, change one thing, look again, keep or restore">
+    <svg viewBox="0 0 760 250" role="img" aria-label="The design loop: look, judge, change one or more things, look again, keep or restore">
       <g class="node hot"><rect x="20" y="95" width="150" height="60" rx="6"/><foreignObject x="20" y="95" width="150" height="60"><div class="fo" xmlns="http://www.w3.org/1999/xhtml">look<small>preview + check</small></div></foreignObject></g>
       <g class="node"><rect x="210" y="95" width="150" height="60" rx="6"/><foreignObject x="210" y="95" width="150" height="60"><div class="fo" xmlns="http://www.w3.org/1999/xhtml">judge<small>against the rules</small></div></foreignObject></g>
-      <g class="node hot"><rect x="400" y="95" width="150" height="60" rx="6"/><foreignObject x="400" y="95" width="150" height="60"><div class="fo" xmlns="http://www.w3.org/1999/xhtml">change one thing<small>after a checkpoint</small></div></foreignObject></g>
+      <g class="node hot"><rect x="400" y="95" width="150" height="60" rx="6"/><foreignObject x="400" y="95" width="150" height="60"><div class="fo" xmlns="http://www.w3.org/1999/xhtml">change 1 to n things<small>after a checkpoint</small></div></foreignObject></g>
       <g class="node"><rect x="590" y="95" width="150" height="60" rx="6"/><foreignObject x="590" y="95" width="150" height="60"><div class="fo" xmlns="http://www.w3.org/1999/xhtml">keep or restore<small>compare checkpoints</small></div></foreignObject></g>
       <path class="edge" d="M170,125 L210,125"/>
       <path class="edge" d="M360,125 L400,125"/>
@@ -52,13 +52,13 @@
       <path class="edge fallback" d="M665,155 L665,215 L95,215 L95,155"/>
       <g class="label"><rect x="300" y="206" width="160" height="18"/><text x="380" y="215">you comment in chat</text></g>
     </svg>
-    <figcaption>Every change returns its own preview and print check, so one tool call moves the loop a whole step.</figcaption>
+    <figcaption>A round changes as many things as one idea needs, and they all land in one rebuild with one preview and one print check.</figcaption>
   </figure>
   <h3>Goals</h3>
   <ul>
     <li>Claude reads the whole design, which is the settings, the layers, the print check and the sizes, in one call.</li>
     <li>Claude changes settings and layers, adds library designs and local images, and the tab rebuilds as it does after a click.</li>
-    <li>Each change comes back with the new preview image and the new print check, so Claude judges the result straight away.</li>
+    <li>Each round of changes, from one to many, comes back with the new preview image and the new print check, so Claude judges the result straight away.</li>
     <li>Claude saves checkpoints, compares two of them side by side, and goes back to one, so an experiment never loses a good design.</li>
     <li>MCP prompts teach Claude the loop and the design rules for each app, and one prompt writes an image-generator prompt sized to the live roller.</li>
     <li>Claude exports the STL, the 3MF plate and the flat PNG.</li>
@@ -183,6 +183,7 @@
       <tr><td><code>add_layer</code>, <code>update_layer</code>, <code>remove_layer</code>, <code>move_layer</code></td><td>stencil, roller</td><td>Edits the layer stack.</td><td>the same as <code>update_settings</code></td></tr>
       <tr><td><code>search_library</code>, <code>add_design</code>, <code>add_image</code></td><td>stencil, roller</td><td>Finds a design, or sends a local image, and adds it as a layer.</td><td>results, then the same as <code>update_settings</code></td></tr>
       <tr><td><code>set_profile</code>, <code>pick_shape</code></td><td>rib</td><td>Sets the pot's points, or picks a library shape.</td><td>the same as <code>update_settings</code></td></tr>
+      <tr><td><code>batch</code></td><td>all</td><td>Applies several changes from the tools above in one rebuild. Either every change applies, or none does.</td><td>the same as <code>update_settings</code></td></tr>
       <tr><td><code>apply_fix</code></td><td>all</td><td>Presses one of a check's fix buttons.</td><td>the same as <code>update_settings</code></td></tr>
       <tr><td><code>checkpoint</code>, <code>restore</code>, <code>compare</code></td><td>all</td><td>Saves the design under a name, puts one back, or shows two side by side.</td><td>names, summary, or two previews</td></tr>
       <tr><td><code>export</code></td><td>all</td><td>Saves the STL, the 3MF plate or the flat PNG.</td><td>a download in the tab, plus its size</td></tr>
@@ -369,7 +370,7 @@
   <p>The roller's bridge applies each tool through the app's own setters, waits for the rebuild, and returns the checks and an optional preview.</p>
   <table>
     <thead><tr><th class="num">#</th><th>PR</th><th>Waits on</th><th>First failing test</th></tr></thead>
-    <tbody><tr><td class="num">3</td><td>State, view, settings, layers, library, images, fixes, checkpoints and export</td><td>P2</td><td>A settings patch with an unknown key is rejected, and the saved design stays the same.</td></tr></tbody>
+    <tbody><tr><td class="num">3</td><td>State, view, settings, layers, batch, library, images, fixes, checkpoints and export</td><td>P2</td><td>A settings patch with an unknown key is rejected, and the saved design stays the same.</td></tr></tbody>
   </table>
   <table>
     <thead><tr><th>Test</th><th>Invariant it protects</th><th>Kind</th></tr></thead>
@@ -379,6 +380,8 @@
       <tr><td>A change's reply carries the result of the rebuild it caused.</td><td>The check in a reply is never stale.</td><td data-tone="good">invariant</td></tr>
       <tr><td><code>restore</code> after <code>checkpoint</code> gives back the same settings and layers.</td><td>An experiment never loses a good design.</td><td data-tone="good">invariant</td></tr>
       <tr><td><code>apply_fix</code> with a fix the check didn't offer is rejected.</td><td>Claude only presses buttons that exist.</td><td data-tone="good">invariant</td></tr>
+      <tr><td>A <code>batch</code> with one bad change leaves the design as it was.</td><td>A round never half-applies.</td><td data-tone="good">invariant</td></tr>
+      <tr><td>A <code>batch</code> of five changes triggers one rebuild and one reply.</td><td>A round costs one wait and one preview, however many things it changes.</td><td data-tone="good">invariant</td></tr>
     </tbody>
   </table>
   <p><b>Done when</b> Claude loads the Hollow Knight image, runs the loop until the check passes, and exports the STL, all from tools.</p>
@@ -419,7 +422,7 @@
     <ol>
       <li>Call <code>get_state</code> and <code>view</code>, and say what you see before you change anything.</li>
       <li>Fix errors first, then warnings, then looks.</li>
-      <li>Save a checkpoint before each experiment, and change one thing per round.</li>
+      <li>Save a checkpoint before each round. Change as many things as one idea needs, and send them together with <code>batch</code>, so they share one rebuild.</li>
       <li>Judge each preview against the rules: lines and gaps at least two nozzle widths, gaps at least as wide as the relief is deep, relief spread evenly round the turn, and no straight lines along the axle.</li>
       <li>Keep a round only when the check and the preview both get better. Otherwise restore.</li>
       <li>Stop when the check passes and the preview reads well, and ask you before you export.</li>
