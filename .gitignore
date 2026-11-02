@@ -8,3 +8,4 @@ dist
 prints/
 audit_*.html
 .wrangler
+.dev.vars

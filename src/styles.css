@@ -221,3 +221,10 @@ details.expert > summary:hover { color: var(--accent); }
 .drawer-close { float: right; }
 @keyframes drawer-in { from { transform: translateX(100%); } }
 .checks .row-actions { margin-top: 6px; }
+
+/* Connect Claude sits at the right of the header, and its panel opens below it. */
+.header-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.claude { position: relative; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.claude-status { font-size: 12.5px; }
+.claude-panel { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; width: min(440px, 90vw); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; box-shadow: var(--lift); }
+.claude-cmd { white-space: pre-wrap; word-break: break-all; font-size: 11.5px; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px; margin: 6px 0 0; }

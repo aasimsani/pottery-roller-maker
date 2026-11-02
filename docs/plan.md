@@ -93,7 +93,19 @@ session token the tab shows after Connect Claude and Turnstile. OAuth replaces t
 
 ### Phase M2: Worker, session object and MCP route (local, under `wrangler dev`)
 
-- [ ] Failing test: opening a session needs a passing Turnstile token and stays under the per-IP limit
-- [ ] Failing test: `/mcp` refuses a missing or wrong token with 401
-- [ ] Session object holds the tab socket and relays calls, and the MCP route serves the tools and prompts
-- [ ] Vite forwards `/mcp` and `/session` to `wrangler dev`, so the tab and the MCP share one origin
+- [x] Failing test: opening a session needs a passing Turnstile token and stays under the per-IP limit
+- [x] Failing test: `/mcp` refuses a missing or wrong token with 401
+- [x] Session object holds the tab socket and relays calls, and the MCP route serves the tools and prompts
+- [x] Vite forwards `/mcp` and `/session` to `wrangler dev`, so the tab and the MCP share one origin
+
+### Phase M3: Tab bridge (local)
+
+- [x] Connect Claude button, Turnstile test key, the session socket and the setup command
+- [x] Handlers for state, view (flat and 3D), batches, library, images, checkpoints, compare, export and the brief
+- [x] Failing test, then fix: a reply waits for the build that includes a new design's art (numbered rebuilds)
+- [x] End to end over curl against `wrangler dev`: every tool, the upload link and `image_prompt`
+
+### Phase M4: Ports (next)
+
+- [ ] Stencil maker on `feat/mcp`
+- [ ] Rib maker on `feat/mcp`

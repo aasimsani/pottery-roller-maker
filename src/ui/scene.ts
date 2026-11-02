@@ -2,6 +2,16 @@ import { useEffect, useRef, type RefObject } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
+// Every live scene registers here, so capture3d() can render a fresh frame for a screenshot. WebGL clears its
+// canvas after each frame, so rendering and reading in the same task is what makes the picture come out.
+const live: OrbitScene[] = [];
+export function capture3d(): HTMLCanvasElement | null {
+  const t = live[live.length - 1];
+  if (!t) return null;
+  t.renderer.render(t.scene, t.camera);
+  return t.renderer.domElement;
+}
+
 export interface OrbitScene { renderer: THREE.WebGLRenderer; scene: THREE.Scene; camera: THREE.PerspectiveCamera; controls: OrbitControls }
 
 // useOrbitScene() sets up a lit three.js scene with orbit controls inside host, sized to it,
@@ -22,6 +32,7 @@ export function useOrbitScene(host: RefObject<HTMLDivElement | null>): RefObject
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     three.current = { renderer, scene, camera, controls };
+    live.push(three.current);
     const resize = () => {
       const { clientWidth: w, clientHeight: h } = el;
       renderer.setSize(w, h, false);
@@ -38,6 +49,7 @@ export function useOrbitScene(host: RefObject<HTMLDivElement | null>): RefObject
       controls.dispose();
       renderer.dispose();
       el.removeChild(renderer.domElement);
+      live.splice(live.indexOf(three.current!), 1);
       three.current = null;
     };
   }, [host]);

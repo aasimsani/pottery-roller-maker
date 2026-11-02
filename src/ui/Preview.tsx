@@ -5,6 +5,7 @@ import { BED_MARGIN } from '../checks';
 import { drawRoller } from '../render/preview';
 import type { PieceMode } from './Piece3D';
 import { useDialog } from './dialog';
+import { registerViewMode } from '../mcp/viewMode';
 
 // three.js is about 600 kB, so the 3D view loads after the rest of the page.
 const Piece3D = lazy(() => import('./Piece3D'));
@@ -44,6 +45,7 @@ export function Preview({ s, result, error, loading, updating, onStl, onAddToPla
     return () => mq.removeEventListener('change', bump);
   }, []);
   useDialog(dialog, expanded, () => setExpanded(false));
+  useEffect(() => { registerViewMode(setMode); return () => registerViewMode(null); }, []);
 
   useEffect(() => {
     if (!result || !flat.current) return;

@@ -18,6 +18,8 @@ import { surfaceLength, type Piece } from './core/piece';
 import { scaleDesign } from './scale';
 import { PlatePanel } from './ui/PlatePanel';
 import { Drawer } from './ui/Drawer';
+import { ConnectClaude } from './ui/ConnectClaude';
+import { makeHandlers } from './mcp/tab';
 import type { PlatePart } from './core/plate';
 
 const download = (blob: Blob, name: string) => {
@@ -37,6 +39,9 @@ export function App() {
   const [result, setResult] = useState<RollerResult | null>(null);
   const [updating, setUpdating] = useState(false);
   const worker = useRef<Worker | null>(null), job = useRef(0);
+  // gen counts every change to the rebuild's inputs, and builtGen is the change the latest result was built from.
+  // Claude's bridge waits until the result on screen matches the latest change, so a reply is never a build behind.
+  const gen = useRef(0), builtGen = useRef(0), jobGen = useRef(0);
   const [error, setError] = useState('');
   const [photoOpen, setPhotoOpen] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
@@ -73,6 +78,7 @@ export function App() {
     const w = new Worker(new URL('./roller.worker.ts', import.meta.url), { type: 'module' });
     w.onmessage = ({ data }: MessageEvent<WorkerReply>) => {
       if (data.id !== job.current) return;
+      builtGen.current = jobGen.current;
       setUpdating(false);
       if ('error' in data) { setError(data.error); return; }
       setResult({ ...data.result, g: geometry(data.result.gp) });
@@ -84,23 +90,28 @@ export function App() {
 
   // Rebuild after a short pause, so typing in a field doesn't start a rebuild on every key.
   useEffect(() => {
+    const g = ++gen.current;
     const p = s.piece.profile;
     if (p.length < 2 || p.some((q) => !(q.d > 0) || !Number.isFinite(q.z)) || !(p[p.length - 1].z > p[0].z)) {
       setError('Check the piece measurements. Every diameter must be above 0, and the rim must be higher than the base.');
+      builtGen.current = g;
       return;
     }
     const t = setTimeout(() => {
       try {
         const prepared = prepareRoller(s, layers, arts), id = ++job.current;
+        jobGen.current = g;
         setUpdating(true);
         if (worker.current) {
           const msg: WorkerRequest = { id, s, prepared };
           worker.current.postMessage(msg, prepared.maskLayers.map((l) => l.tile.paint.buffer as ArrayBuffer));
         } else {
           setResult(finishRoller(s, prepared)); setUpdating(false); setError('');
+          builtGen.current = g;
         }
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
+        builtGen.current = g;
       }
     }, 150);
     return () => clearTimeout(t);
@@ -132,11 +143,27 @@ export function App() {
   };
   const onPng = (cv: HTMLCanvasElement) => cv.toBlob((b) => b && download(b, `${baseName}.png`));
 
+  // Claude's handlers read the latest render through a ref, and they change the design through the same state your clicks change.
+  const latest = useRef({ s, layers, result, updating, error, baseName, loading, renderedGen: builtGen.current });
+  latest.current = { s, layers, result, updating, error, baseName, loading, renderedGen: builtGen.current };
+  const handlers = useMemo(() => makeHandlers({
+    get: () => latest.current,
+    gen: () => gen.current,
+    commit: (next) => { setSettings({ ...next.settings }); setLayers(next.layers); },
+    download,
+    baseName: () => latest.current.baseName,
+  }), []); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <>
       <header>
-        <h1>Pottery Roller Maker</h1>
-        <p>Printable texture and underglaze rollers, sized to your pot.</p>
+        <div className="header-row">
+          <div>
+            <h1>Pottery Roller Maker</h1>
+            <p>Printable texture and underglaze rollers, sized to your pot.</p>
+          </div>
+          <ConnectClaude handlers={handlers} />
+        </div>
       </header>
       <div className="app">
         <Controls s={s} set={set} result={result} onPhoto={() => setPhotoOpen(true)} onScale={onScale} />
