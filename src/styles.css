@@ -1,0 +1,46 @@
+/* The tokens match Pottery Stencil Maker, so the two apps look like one family. */
+:root {
+  --bg: #f6f3ee; --panel: #fffdf9; --ink: #2a2622; --muted: #6e655c; --line: #e4ddd2; --field-line: #8f8472;
+  --accent: #2f6f73; --caution: #8a5a0a;
+  --display: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --lift: 0 1px 2px rgb(42 38 34 / .06), 0 10px 28px rgb(42 38 34 / .07);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1c1a18; --panel: #24221f; --ink: #ece6dc; --muted: #a39a8e; --line: #3a3631; --field-line: #7a7166;
+    --accent: #6fb5b8; --caution: #e2ad55; --lift: 0 1px 2px rgb(0 0 0 / .3), 0 10px 28px rgb(0 0 0 / .25);
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+header { padding: 18px 20px 6px; }
+h1 { font-family: var(--display); font-size: 27px; font-weight: 600; margin: 0; }
+header p, .hint { margin: 4px 0 0; color: var(--muted); }
+h2 { font-family: var(--display); font-size: 18px; margin: 0 0 8px; font-weight: 600; }
+.app { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 16px; padding: 12px 20px 24px; align-items: start; }
+@media (max-width: 860px) { .app { grid-template-columns: 1fr; padding: 12px 16px; } main { order: -1; } }
+main { display: grid; gap: 16px; min-width: 0; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; min-width: 0; }
+.panel.preview { box-shadow: var(--lift); display: grid; gap: 12px; }
+fieldset { border: 0; border-top: 1px solid var(--line); margin: 10px 0 0; padding: 10px 0 0; min-width: 0; }
+fieldset:first-of-type { border-top: 0; }
+legend { font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 0; }
+label { display: grid; grid-template-columns: 1fr 130px; align-items: center; gap: 8px; margin: 7px 0; }
+label.check { grid-template-columns: auto 1fr; }
+label.file { grid-template-columns: 1fr; }
+.field { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+input[type="number"] { width: 100%; font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--field-line); border-radius: 6px; padding: 4px 6px; font-variant-numeric: tabular-nums; }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+input:disabled { opacity: .6; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button { font: inherit; font-weight: 600; color: #fff; background: var(--accent); border: 0; border-radius: 8px; padding: 9px 14px; cursor: pointer; justify-self: start; }
+button.secondary { color: var(--accent); background: transparent; border: 1px solid var(--accent); padding: 6px 10px; margin-top: 4px; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+.view3d { height: min(58vh, 520px); min-height: 280px; border-radius: 8px; background: var(--bg); cursor: grab; }
+.view3d canvas { display: block; width: 100%; height: 100%; }
+.facts { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 0; }
+.facts dt { font-size: 12px; color: var(--muted); }
+.facts dd { margin: 0; font-variant-numeric: tabular-nums; }
+.warnings { margin: 0; padding-left: 1.2em; color: var(--caution); }
+.ready { margin: 0; color: var(--accent); font-weight: 600; }
+.imprint { display: block; width: 100%; height: auto; border-radius: 6px; }
