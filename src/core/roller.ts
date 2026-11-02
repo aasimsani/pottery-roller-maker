@@ -45,16 +45,10 @@ export function seamMismatch(m: Heightmap): number {
   return sum / m.h;
 }
 
-// heightmapFromImage() raises pixels darker than threshold, then box-blurs by softenPx.
-// The blur slopes the relief walls, which helps the roller release from the clay. It wraps left to right.
-export function heightmapFromImage(rgba: ArrayLike<number>, w: number, h: number,
-  o: { threshold: number; invert: boolean; softenPx: number }): Heightmap {
-  const data = new Float32Array(w * h);
-  for (let k = 0; k < w * h; k++) {
-    const lum = 0.299 * rgba[k * 4] + 0.587 * rgba[k * 4 + 1] + 0.114 * rgba[k * 4 + 2];
-    data[k] = (lum < o.threshold) !== o.invert ? 1 : 0;
-  }
-  const r = Math.round(o.softenPx);
+// heightmapFromBits() raises the set pixels, then box-blurs them by softenPx. The blur slopes the
+// relief walls, which helps the roller lift off the clay. It wraps left to right, because the pattern runs round the roller.
+export function heightmapFromBits(bits: Uint8Array, w: number, h: number, softenPx: number): Heightmap {
+  const data = Float32Array.from(bits), r = Math.round(softenPx);
   if (r > 0) {
     const tmp = new Float32Array(w * h), n = 2 * r + 1;
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {

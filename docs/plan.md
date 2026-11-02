@@ -60,7 +60,7 @@ because thin walls with end plates usually beat 15% infill, but not always on a 
 - [x] Implement `src/core/roller.ts` so the tests pass
 - [x] Refactor while green
 
-### Phase 2: Proto UI
+### Phase 2: Proto UI (superseded by Phase 2b)
 
 - [x] Image upload and threshold, with a built-in seamless sample pattern
 - [x] Controls for size, depth, repeats, plain ends, bore, and mesh detail, plus the pot-fit helper
@@ -69,3 +69,11 @@ because thin walls with end plates usually beat 15% infill, but not always on a 
 - [x] Same layout, tokens and number fields as the stencil and rib makers
 - [x] Two uses, pressing a texture and printing underglaze, each with its own depth and edge
 - [x] Hollow drum with end plates of spokes, or solid at a chosen infill, with a filament estimate for both
+
+### Phase 2b: Fork the stencil maker's app
+
+- [x] Copy the stencil maker's app, so the roller has the same layout and features: piece presets, saved pieces, photo tracing, scale to widest Ø, pattern band, design library, layers and lines, 3D views with Expand, print check, plate 3MF, printer settings
+- [x] Write failing tests for the roller pipeline, checks and settings
+- [x] Replace the stencil pipeline with `prepareRoller()` / `finishRoller()`, sized from the pot: D = pot Ø / turns per lap
+- [x] Port Controls, Preview, the pot view (shows the impression laps times round) and the print view
+- [x] Keep settings and layers under `roller.*` keys, so both apps can share an origin and saved pieces

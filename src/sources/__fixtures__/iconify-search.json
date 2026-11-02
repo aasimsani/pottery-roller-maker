@@ -1,0 +1,132 @@
+{
+    "icons": [
+        "iconoven:fern",
+        "iconoven:fern-sharp",
+        "game-icons:fern",
+        "arcticons:ferns-n-petals",
+        "openmoji:stuttgart-fernsehturm"
+    ],
+    "total": 5,
+    "limit": 32,
+    "start": 0,
+    "collections": {
+        "iconoven": {
+            "name": "IconOven",
+            "total": 18236,
+            "author": {
+                "name": "Appic Marketing",
+                "url": "https://iconoven.com/icons"
+            },
+            "license": {
+                "title": "MIT",
+                "spdx": "MIT"
+            },
+            "samples": [
+                "bell",
+                "home",
+                "credit-card",
+                "bell-sharp",
+                "home-sharp",
+                "credit-card-sharp"
+            ],
+            "height": 24,
+            "category": "UI 24px",
+            "tags": [
+                "Precise Shapes",
+                "Has Padding",
+                "Uses Stroke"
+            ],
+            "palette": false
+        },
+        "game-icons": {
+            "name": "Game Icons",
+            "total": 4133,
+            "author": {
+                "name": "GameIcons",
+                "url": "https://github.com/game-icons/icons"
+            },
+            "license": {
+                "title": "CC BY 3.0",
+                "spdx": "CC-BY-3.0",
+                "url": "https://github.com/game-icons/icons/blob/master/license.txt"
+            },
+            "samples": [
+                "diamond-trophy",
+                "thrown-spear",
+                "rank-3",
+                "stairs",
+                "table",
+                "soda-can"
+            ],
+            "category": "Thematic",
+            "tags": [
+                "Has Padding"
+            ],
+            "palette": false
+        },
+        "arcticons": {
+            "name": "Arcticons",
+            "total": 15322,
+            "author": {
+                "name": "Donnnno",
+                "url": "https://github.com/Arcticons-Team/Arcticons"
+            },
+            "license": {
+                "title": "CC BY-SA 4.0",
+                "spdx": "CC-BY-SA-4.0",
+                "url": "https://creativecommons.org/licenses/by-sa/4.0/"
+            },
+            "samples": [
+                "paperlaunch",
+                "gravadordevoz",
+                "appstract",
+                "clipious",
+                "productivity",
+                "daserste"
+            ],
+            "height": 48,
+            "displayHeight": 24,
+            "category": "Logos",
+            "tags": [
+                "Precise Shapes",
+                "Has Padding"
+            ],
+            "palette": false
+        },
+        "openmoji": {
+            "name": "OpenMoji",
+            "total": 4544,
+            "author": {
+                "name": "OpenMoji",
+                "url": "https://github.com/hfg-gmuend/openmoji"
+            },
+            "license": {
+                "title": "CC BY-SA 4.0",
+                "spdx": "CC-BY-SA-4.0",
+                "url": "https://creativecommons.org/licenses/by-sa/4.0/"
+            },
+            "samples": [
+                "bicycle",
+                "bow-and-arrow",
+                "full-moon-face",
+                "plus",
+                "solar-cell",
+                "battery"
+            ],
+            "height": 36,
+            "displayHeight": 18,
+            "category": "Emoji",
+            "tags": [
+                "Precise Shapes",
+                "Has Padding",
+                "Uses Stroke"
+            ],
+            "palette": true
+        }
+    },
+    "request": {
+        "query": "fern",
+        "limit": "4",
+        "palette": "false"
+    }
+}

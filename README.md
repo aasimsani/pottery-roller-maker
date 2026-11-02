@@ -1,8 +1,21 @@
 # Pottery Roller Maker
 
-Pottery Roller Maker turns a pattern image into a 3D-printable texture roller for clay. You set the roller's diameter,
-or the pot it should fit, and the app sizes the drum so that the pattern keeps its proportions and meets itself at the
-end of each lap.
+Pottery Roller Maker designs 3D-printable texture and underglaze rollers sized to a pot. It's the sister app of
+[Pottery Stencil Maker](https://github.com/aasimsani/pottery-stencil-maker) and shares its layout, its design library and
+its layers.
+
+## Make a roller
+
+1. **Describe the pot.** Pick a preset, or enter its base Ø, rim Ø and height. Saved pieces are shared with the stencil maker.
+2. **Place the pattern band.** It sets the roller's patterned length.
+3. **Set the roller.** Pick **press a texture** or **print underglaze**, and the turns per lap. The roller's diameter is the
+   pot's divided by the turns, so the pattern meets itself where you finish.
+4. **Add designs** from the library, or your own images, as layers. A layer's repeats count round the pot.
+5. **Choose how it prints.** A hollow drum has spokes at the ends, and a solid drum uses sparse infill. The app shows the
+   filament for both.
+6. **Check it and download the STL**, or add several rollers to a plate and download one 3MF file.
+
+A straight roller rolls cleanly only on a straight wall. The print check warns when the band tapers.
 
 ## Run it
 
@@ -11,12 +24,4 @@ npm install
 npm run dev
 ```
 
-## How it works
-
-- Dark parts of the image become raised relief, which presses grooves into the clay. **Invert** swaps this.
-- The roller carries the pattern mirrored, so the impression in clay reads the right way round.
-- One turn rolls π × the diameter at the tips. With the image's proportions kept, that sets the drum length.
-- To fit a pot, the pot's diameter divided by the roller's diameter must be a whole number.
-- The drum prints standing on its end. It has plain ends and an 8.2 mm axle hole for an 8 mm dowel.
-
-See `docs/plan.md` for the phases still to come, including the handle and conical rollers for tapered pots.
+Run `npm test` and `npm run build` before you commit. The plan lives in `docs/plan.md`.

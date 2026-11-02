@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  diameterForPattern, diameterForPot, drumParts, filamentGrams, heightAt, heightmapFromImage, lengthForDiameter,
+  diameterForPattern, diameterForPot, drumParts, filamentGrams, heightAt, heightmapFromBits, lengthForDiameter,
   rollerMesh, seamMismatch, toSTL, volume, type DrumBuild, type Heightmap, type Mesh, type RollerSpec,
 } from './roller';
 
@@ -48,11 +48,14 @@ describe('seamMismatch', () => {
   });
 });
 
-describe('heightmapFromImage', () => {
-  it('raises dark pixels unless inverted', () => {
-    const rgba = new Uint8ClampedArray([0, 0, 0, 255, 255, 255, 255, 255]);
-    expect([...heightmapFromImage(rgba, 2, 1, { threshold: 128, invert: false, softenPx: 0 }).data]).toEqual([1, 0]);
-    expect([...heightmapFromImage(rgba, 2, 1, { threshold: 128, invert: true, softenPx: 0 }).data]).toEqual([0, 1]);
+describe('heightmapFromBits', () => {
+  it('raises set pixels, and softening spreads their edges without changing the total', () => {
+    const bits = new Uint8Array([0, 0, 1, 1, 0, 0]);
+    expect([...heightmapFromBits(bits, 6, 1, 0).data]).toEqual([0, 0, 1, 1, 0, 0]);
+    const soft = heightmapFromBits(bits, 6, 1, 1).data;
+    expect(soft[2]).toBeLessThan(1);
+    expect(soft[1]).toBeGreaterThan(0);
+    expect(soft.reduce((a, v) => a + v, 0)).toBeCloseTo(2);
   });
 });
 

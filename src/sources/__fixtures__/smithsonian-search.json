@@ -1,0 +1,274 @@
+{
+ "status": 200,
+ "responseCode": 1,
+ "response": {
+  "rows": [
+   {
+    "id": "ld1-1643403783737-1643403783996-0",
+    "title": "Woman's outfit",
+    "unitCode": "NMAI",
+    "type": "edanmdm",
+    "url": "edanmdm:NMAI_219643",
+    "content": {
+     "descriptiveNonRepeating": {
+      "guid": "http://n2t.net/ark:/65665/ws610ea09c5-07a8-4762-a42b-8d6cbe7d604b",
+      "title": {
+       "label": "Object Name",
+       "content": "Woman's outfit"
+      },
+      "record_ID": "NMAI_219643",
+      "unit_code": "NMAI",
+      "title_sort": "Woman's outfit",
+      "data_source": "National Museum of the American Indian",
+      "record_link": "http://n2t.net/ark:/65665/ws610ea09c5-07a8-4762-a42b-8d6cbe7d604b",
+      "record_type": "",
+      "metadata_usage": {
+       "access": "CC0"
+      }
+     },
+     "freetext": {
+      "name": [
+       {
+        "label": "Culture/People",
+        "content": "Nahua"
+       },
+       {
+        "label": "Previous owner",
+        "content": "Hortense Tanenbaum Ferne (Mrs. Herman Ferne), Non-Indian, 1885-1976"
+       },
+       {
+        "label": "Lender",
+        "content": "Hortense Tanenbaum Ferne (Mrs. Herman Ferne), Non-Indian, 1885-1976"
+       },
+       {
+        "label": "Donor",
+        "content": "Hortense Tanenbaum Ferne (Mrs. Herman Ferne), Non-Indian, 1885-1976"
+       }
+      ],
+      "notes": [
+       {
+        "label": "Collection History",
+        "content": "Collection history unknown; formerly in the collection of artist Hortense T. Ferne (1885-1976); lent to MAI by Hortense Ferne in 1943; donated to MAI by Hortense Ferne in 1961."
+       },
+       {
+        "label": "Contact Us",
+        "content": "Have a concern, a correction, or something to add? Contact us: https://nmai.si.edu/collections-statement"
+       }
+      ],
+      "place": [
+       {
+        "label": "Place",
+        "content": "Mexico"
+       }
+      ],
+      "setName": [
+       {
+        "label": "See related items",
+        "content": "Nahua"
+       },
+       {
+        "label": "See related items",
+        "content": "Clothing/Garments"
+       }
+      ],
+      "dataSource": [
+       {
+        "label": "Data Source",
+        "content": "National Museum of the American Indian"
+       }
+      ],
+      "identifier": [
+       {
+        "label": "Catalog Number",
+        "content": "20/5911"
+       },
+       {
+        "label": "Barcode",
+        "content": "205911.000"
+       }
+      ],
+      "objectType": [
+       {
+        "label": "Object Type",
+        "content": "Clothing/Garments"
+       }
+      ],
+      "physicalDescription": [
+       {
+        "label": "Object Name",
+        "content": "Woman's outfit"
+       },
+       {
+        "label": "Media/Materials",
+        "content": "Metal, wood"
+       },
+       {
+        "label": "Techniques",
+        "content": "Painted"
+       }
+      ]
+     }
+    },
+    "hash": "0222b6ddeebe9cee02cc276c0b5f750745d15c07",
+    "docSignature": "7bdddb52099804379f62e4b832cce6ee",
+    "timestamp": "1663783746",
+    "lastTimeUpdated": "1789202778",
+    "version": "1789201897"
+   },
+   {
+    "id": "ld1-1643408033027-1643408037953-0",
+    "title": "Dissotidendron arborescens (A. Fern. & R. Fern.) Ver.-Lib. & G. Kadereit",
+    "unitCode": "NMNHBOTANY",
+    "type": "edanmdm",
+    "url": "edanmdm:nmnhbotany_14211687",
+    "content": {
+     "descriptiveNonRepeating": {
+      "guid": "http://n2t.net/ark:/65665/39431d272-ec95-4003-8fb0-ce1f57ffd695",
+      "title": {
+       "label": "title",
+       "content": "Dissotidendron arborescens (A. Fern. & R. Fern.) Ver.-Lib. & G. Kadereit"
+      },
+      "record_ID": "nmnhbotany_14211687",
+      "unit_code": "NMNHBOTANY",
+      "title_sort": "DISSOTIDENDRON ARBORESCENS A FERN R FERN VERLIB G KADEREIT",
+      "data_source": "NMNH - Botany Dept.",
+      "record_link": "http://n2t.net/ark:/65665/39431d272-ec95-4003-8fb0-ce1f57ffd695",
+      "online_media": {
+       "media": [
+        {
+         "id": "media:NMNH-02922448",
+         "guid": "http://n2t.net/ark:/65665/m36c4ac67d-0955-47be-9dac-0683a554c72a",
+         "type": "Images",
+         "idsId": "ark:/65665/m36c4ac67d095547be9dac0683a554c72a",
+         "usage": {
+          "access": "CC0"
+         },
+         "content": "https://ids.si.edu/ids/deliveryService/id/ark:/65665/m36c4ac67d095547be9dac0683a554c72a",
+         "thumbnail": "https://ids.si.edu/ids/deliveryService/id/ark:/65665/m36c4ac67d095547be9dac0683a554c72a/90",
+         "altTextAccessibility": "",
+         "extDescrAccessibility": "",
+         "resources": [
+          {
+           "label": "High-resolution TIFF",
+           "url": "https://ids.si.edu/ids/download?id=NMNH-02922448.tif",
+           "width": 6803,
+           "height": 8994,
+           "dimensions": "6803x8994"
+          },
+          {
+           "label": "High-resolution JPEG",
+           "url": "https://ids.si.edu/ids/download?id=NMNH-02922448.jpg",
+           "width": 6803,
+           "height": 8994,
+           "dimensions": "6803x8994"
+          },
+          {
+           "label": "Screen Image",
+           "url": "https://ids.si.edu/ids/download?id=NMNH-02922448_screen"
+          },
+          {
+           "label": "Thumbnail Image",
+           "url": "https://ids.si.edu/ids/download?id=NMNH-02922448_thumb"
+          }
+         ]
+        }
+       ],
+       "mediaCount": 1
+      },
+      "metadata_usage": {
+       "access": "CC0"
+      }
+     },
+     "freetext": {
+      "date": [
+       {
+        "label": "Collection Date",
+        "content": "14 Jul 1963"
+       }
+      ],
+      "name": [
+       {
+        "label": "Biogeographical Region",
+        "content": "25 - East Tropical Africa"
+       },
+       {
+        "label": "Collector",
+        "content": "Mildred E. Mathias"
+       },
+       {
+        "label": "Collector",
+        "content": "Dermot Taylor"
+       }
+      ],
+      "notes": [
+       {
+        "label": "Record Last Modified",
+        "content": "18 Nov 2025"
+       },
+       {
+        "label": "Specimen Count",
+        "content": "1"
+       }
+      ],
+      "place": [
+       {
+        "label": "Place",
+        "content": "Tanganyika: Southern Highlands, dry savannah 53 mi south of Iringa on Mbeya Rd., Tanzania, Africa"
+       }
+      ],
+      "setName": [
+       {
+        "label": "See more items in",
+        "content": "Botany"
+       },
+       {
+        "label": "See more items in",
+        "content": "Angiosperms"
+       }
+      ],
+      "publisher": [
+       {
+        "label": "Published Name",
+        "content": "Dissotidendron arborescens (A. Fern. & R. Fern.) Ver.-Lib. & G. Kadereit"
+       },
+       {
+        "label": "Published Name",
+        "content": "Dissotis arborescens A. Fern. & R. Fern."
+       }
+      ],
+      "dataSource": [
+       {
+        "label": "Data Source",
+        "content": "NMNH - Botany Dept."
+       }
+      ],
+      "identifier": [
+       {
+        "label": "Barcode",
+        "content": "02922448"
+       },
+       {
+        "label": "USNM Number",
+        "content": "2559128"
+       }
+      ],
+      "taxonomicName": [
+       {
+        "label": "Taxonomy",
+        "content": "Plantae Dicotyledonae Myrtales Melastomataceae Melastomatoideae"
+       }
+      ]
+     }
+    },
+    "hash": "c8ce79e910e45bbf830fe8cb15e6954c1d1a61b1",
+    "docSignature": "36faffa6d36c8bbcb2b43e43812a2e11",
+    "timestamp": "1663782312",
+    "lastTimeUpdated": "1764155151",
+    "version": "1764150341"
+   }
+  ],
+  "facets": {},
+  "rowCount": 277393,
+  "message": "content found"
+ }
+}
