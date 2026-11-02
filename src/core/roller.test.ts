@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  diameterForPattern, diameterForPot, heightAt, heightmapFromImage, lengthForDiameter,
-  rollerMesh, seamMismatch, toSTL, type Heightmap, type RollerSpec,
+  diameterForPattern, diameterForPot, drumParts, filamentGrams, heightAt, heightmapFromImage, lengthForDiameter,
+  rollerMesh, seamMismatch, toSTL, volume, type DrumBuild, type Heightmap, type Mesh, type RollerSpec,
 } from './roller';
 
 const spec = (o: Partial<RollerSpec> = {}): RollerSpec => ({
@@ -65,16 +65,6 @@ function edgeCounts(idx: Uint32Array) {
   }
   return m;
 }
-function signedVolume({ positions: p, indices: i }: { positions: Float32Array; indices: Uint32Array }) {
-  let v = 0;
-  for (let t = 0; t < i.length; t += 3) {
-    const [a, b, c] = [i[t] * 3, i[t + 1] * 3, i[t + 2] * 3];
-    v += (p[a] * (p[b + 1] * p[c + 2] - p[b + 2] * p[c + 1]) - p[a + 1] * (p[b] * p[c + 2] - p[b + 2] * p[c])
-      + p[a + 2] * (p[b] * p[c + 1] - p[b + 1] * p[c])) / 6;
-  }
-  return v;
-}
-
 describe('rollerMesh', () => {
   for (const bore of [8, 0]) {
     it(`is closed and consistently wound (bore ${bore})`, () => {
@@ -89,12 +79,50 @@ describe('rollerMesh', () => {
   }
   it('has the volume of a tube when the pattern is flat, so normals point out', () => {
     const s = spec({ cell: 0.25 }), R = s.diameter / 2 - s.depth, r = s.bore / 2;
-    expect(signedVolume(rollerMesh(flat(0), s)) / (Math.PI * (R * R - r * r) * s.length)).toBeCloseTo(1, 2);
+    expect(volume(rollerMesh(flat(0), s)) / (Math.PI * (R * R - r * r) * s.length)).toBeCloseTo(1, 2);
   });
   it('writes a binary STL with one 50-byte record per triangle', () => {
     const mesh = rollerMesh(ramp(), spec());
     const buf = toSTL(mesh), tris = mesh.indices.length / 3;
     expect(buf.byteLength).toBe(84 + 50 * tris);
     expect(new DataView(buf).getUint32(80, true)).toBe(tris);
+  });
+});
+
+const closed = (mesh: Mesh) => {
+  const e = edgeCounts(mesh.indices);
+  return [...e].every(([key, n]) => { const [a, b] = key.split(','); return n === 1 && e.get(`${b},${a}`) === 1; });
+};
+const hollow = (o: Partial<DrumBuild> = {}): DrumBuild => ({ kind: 'hollow', wall: 3, spokes: 4, spokeW: 3, hub: 3, plate: 6, infill: 0.15, ...o });
+
+describe('drumParts', () => {
+  it('builds a hollow drum from closed parts that use less plastic than a solid one', () => {
+    const s = spec({ cell: 0.5 }), parts = drumParts(ramp(), s, hollow());
+    // The tube, then a hub and its spokes at each end.
+    expect(parts.length).toBe(1 + 2 * (1 + 4));
+    for (const p of parts) { expect(closed(p)).toBe(true); expect(volume(p)).toBeGreaterThan(0); }
+    expect(parts.reduce((v, p) => v + volume(p), 0)).toBeLessThan(volume(rollerMesh(ramp(), s)) * 0.6);
+  });
+  it('keeps the end plates inside the drum length', () => {
+    const s = spec({ cell: 0.5 });
+    for (const p of drumParts(ramp(), s, hollow()).slice(1)) {
+      const z = p.positions.filter((_, k) => k % 3 === 2);
+      expect(Math.min(...z)).toBeGreaterThanOrEqual(0);
+      expect(Math.max(...z)).toBeLessThanOrEqual(s.length);
+      expect(Math.max(...z) - Math.min(...z)).toBeCloseTo(6);
+    }
+  });
+  it('falls back to a solid drum when the wall leaves no room for spokes', () => {
+    expect(drumParts(ramp(), spec({ diameter: 20 }), hollow({ wall: 6 })).length).toBe(1);
+  });
+});
+
+describe('filamentGrams', () => {
+  const s = spec({ cell: 0.5 }), solid = drumParts(flat(0), s, hollow({ kind: 'solid' }));
+  it('counts the whole volume at 100% infill', () => {
+    expect(filamentGrams(solid, s, hollow({ kind: 'solid', infill: 1 }))).toBeCloseTo((volume(solid[0]) / 1000) * 1.27, 1);
+  });
+  it('uses less filament at lower infill', () => {
+    expect(filamentGrams(solid, s, hollow({ kind: 'solid', infill: 0.1 }))).toBeLessThan(filamentGrams(solid, s, hollow({ kind: 'solid', infill: 1 })) * 0.6);
   });
 });

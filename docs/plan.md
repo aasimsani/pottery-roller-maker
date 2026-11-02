@@ -36,6 +36,12 @@ and reuses that app's stack (Vite, React, TypeScript, three.js, Vitest) and its 
 2. The handle, which is optional. It's a fork that takes an axle rod or a printed axle, and it
    comes in a later phase.
 
+## Print options
+
+A hollow drum is a relief tube with an end plate of spokes at each end, and its middle stays empty.
+A solid drum leaves the inside to the slicer's sparse infill. The app shows the filament for both,
+because thin walls with end plates usually beat 15% infill, but not always on a small roller.
+
 ## Phases
 
 | Phase | Delivers |
@@ -60,3 +66,6 @@ and reuses that app's stack (Vite, React, TypeScript, three.js, Vitest) and its 
 - [x] Controls for size, depth, repeats, plain ends, bore, and mesh detail, plus the pot-fit helper
 - [x] 3D roller view and clay impression preview
 - [x] STL download, plus checks for bed fit and seam
+- [x] Same layout, tokens and number fields as the stencil and rib makers
+- [x] Two uses, pressing a texture and printing underglaze, each with its own depth and edge
+- [x] Hollow drum with end plates of spokes, or solid at a chosen infill, with a filament estimate for both

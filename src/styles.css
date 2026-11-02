@@ -1,46 +1,128 @@
-/* The tokens match Pottery Stencil Maker, so the two apps look like one family. */
+/* Tokens. Text colours (--ink, --muted, --error, --caution, --accent) meet 4.5:1 on --panel and --bg in both
+   themes, and --field-line meets 3:1, per WCAG 2.2 AA. Swatch colours (--island, --bridge, ...) are for fills only. */
 :root {
   --bg: #f6f3ee; --panel: #fffdf9; --ink: #2a2622; --muted: #6e655c; --line: #e4ddd2; --field-line: #8f8472;
-  --accent: #2f6f73; --caution: #8a5a0a;
+  --accent: #2f6f73; --error: #b1361d; --caution: #8a5a0a; --paper: #fbf8f3; --hole: #efe9df;
+  --plastic: #2f6f73; --island: #d2452f; --bridge: #e39a1d; --clay: #e8dcc8; --thin-hole: #9b4dca; --flap: #e8c547; --sag: #ff6b1a;
+  --print-plastic: #f2efe9; --print-bed: #2e2b28; --print-grid: #4a4540;
   --display: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
   --lift: 0 1px 2px rgb(42 38 34 / .06), 0 10px 28px rgb(42 38 34 / .07);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #1c1a18; --panel: #24221f; --ink: #ece6dc; --muted: #a39a8e; --line: #3a3631; --field-line: #7a7166;
-    --accent: #6fb5b8; --caution: #e2ad55; --lift: 0 1px 2px rgb(0 0 0 / .3), 0 10px 28px rgb(0 0 0 / .25);
+    --accent: #6fb5b8; --plastic: #5aa3a6; --error: #f0907a; --caution: #e2ad55; --paper: #f1ece3; --hole: #141210;
+    --print-plastic: #ece6dc; --print-bed: #1a1816; --print-grid: #3d3934;
+    --lift: 0 1px 2px rgb(0 0 0 / .3), 0 10px 28px rgb(0 0 0 / .25);
   }
+}
+:root[data-theme="dark"] {
+  --bg: #1c1a18; --panel: #24221f; --ink: #ece6dc; --muted: #a39a8e; --line: #3a3631; --field-line: #7a7166;
+  --accent: #6fb5b8; --plastic: #5aa3a6; --error: #f0907a; --caution: #e2ad55; --paper: #f1ece3; --hole: #141210;
+  --print-plastic: #ece6dc; --print-bed: #1a1816; --print-grid: #3d3934;
+  --lift: 0 1px 2px rgb(0 0 0 / .3), 0 10px 28px rgb(0 0 0 / .25);
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+a { color: var(--accent); }
 header { padding: 18px 20px 6px; }
-h1 { font-family: var(--display); font-size: 27px; font-weight: 600; margin: 0; }
-header p, .hint { margin: 4px 0 0; color: var(--muted); }
-h2 { font-family: var(--display); font-size: 18px; margin: 0 0 8px; font-weight: 600; }
-.app { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 16px; padding: 12px 20px 24px; align-items: start; }
+h1 { font-family: var(--display); font-size: 27px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+header p { margin: 4px 0 0; color: var(--muted); }
+/* Panel titles are set in the display serif. Small uppercase labels are kept for groups inside a panel. */
+h2 { font-family: var(--display); font-size: 18px; margin: 0 0 8px; color: var(--ink); font-weight: 600; letter-spacing: -0.005em; }
+
+.app { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; padding: 12px 20px 24px; align-items: start; }
+/* On a phone the stencil, its check and Download come first, and the settings follow. */
 @media (max-width: 860px) { .app { grid-template-columns: 1fr; padding: 12px 16px; } main { order: -1; } }
 main { display: grid; gap: 16px; min-width: 0; }
-.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; min-width: 0; }
-.panel.preview { box-shadow: var(--lift); display: grid; gap: 12px; }
+/* On a wider screen the app fits the window. The header stays in place, and the settings and the
+   work each scroll on their own, so the stencil stays in view while you change a setting. */
+@media (min-width: 861px) {
+  html, body, #root { height: 100%; }
+  #root { display: flex; flex-direction: column; }
+  .app { flex: 1; min-height: 0; align-items: stretch; padding-bottom: 12px; }
+  .app { grid-template-columns: 314px minmax(0, 1fr); }
+  .app > aside, .app > main { min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+  /* macOS draws its scrollbar over the content, so the settings keep room for it on the right. */
+  .app > aside.controls { padding-right: 14px; }
+  /* The padding keeps the raised preview's shadow inside main's scroll area, so the shadow is not clipped. */
+  main { align-content: start; padding: 0 8px 12px; margin: 0 -8px; }
+}
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; min-width: 0; }
+/* The work is the hero. The preview is raised, and the settings and library sit back on the page. */
+.panel.preview { box-shadow: var(--lift); padding: 16px 18px; }
+.panel.controls, .panel.library { background: transparent; border-color: transparent; padding-inline: 2px; }
+.controls { padding-top: 4px; }
+
 fieldset { border: 0; border-top: 1px solid var(--line); margin: 10px 0 0; padding: 10px 0 0; min-width: 0; }
-fieldset:first-of-type { border-top: 0; }
+.controls fieldset:first-of-type { border-top: 0; }
 legend { font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 0; }
-label { display: grid; grid-template-columns: 1fr 130px; align-items: center; gap: 8px; margin: 7px 0; }
+label { display: grid; grid-template-columns: 1fr 110px; align-items: center; gap: 8px; margin: 7px 0; }
+label:has(select) { grid-template-columns: 1fr minmax(0, 190px); }
 label.check { grid-template-columns: auto 1fr; }
-label.file { grid-template-columns: 1fr; }
-.field { display: flex; align-items: center; gap: 6px; color: var(--muted); }
-input[type="number"] { width: 100%; font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--field-line); border-radius: 6px; padding: 4px 6px; font-variant-numeric: tabular-nums; }
-input[type="range"] { width: 100%; accent-color: var(--accent); }
-input:disabled { opacity: .6; }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-button { font: inherit; font-weight: 600; color: #fff; background: var(--accent); border: 0; border-radius: 8px; padding: 9px 14px; cursor: pointer; justify-self: start; }
-button.secondary { color: var(--accent); background: transparent; border: 1px solid var(--accent); padding: 6px 10px; margin-top: 4px; }
-button:disabled { opacity: .5; cursor: not-allowed; }
-.view3d { height: min(58vh, 520px); min-height: 280px; border-radius: 8px; background: var(--bg); cursor: grab; }
-.view3d canvas { display: block; width: 100%; height: 100%; }
-.facts { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 0; }
-.facts dt { font-size: 12px; color: var(--muted); }
-.facts dd { margin: 0; font-variant-numeric: tabular-nums; }
-.warnings { margin: 0; padding-left: 1.2em; color: var(--caution); }
-.ready { margin: 0; color: var(--accent); font-weight: 600; }
-.imprint { display: block; width: 100%; height: auto; border-radius: 6px; }
+label.range { grid-template-columns: 1fr; gap: 4px; }
+label.range output { color: var(--muted); font-variant-numeric: tabular-nums; }
+.range-row { display: flex; align-items: center; gap: 8px; }
+.range-row input { flex: 1; }
+input, select { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--field-line); border-radius: 6px; padding: 5px 7px; width: 100%; min-width: 0; min-height: 30px; }
+input[type=range] { padding: 0; accent-color: var(--accent); }
+input[type=checkbox] { width: 18px; height: 18px; min-height: 0; margin: 0; accent-color: var(--accent); }
+input[type=color] { padding: 0; height: 28px; }
+label:has(.num) { grid-template-columns: 1fr 156px; }
+.num { display: grid; grid-template-columns: 30px minmax(0, 1fr) 30px; gap: 3px; align-items: center; }
+.num button { background: transparent; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 0; min-height: 30px; font-size: 16px; font-weight: 500; line-height: 1; }
+.num button:hover:not(:disabled) { background: var(--line); color: var(--ink); }
+.u { position: relative; display: block; }
+.u::after { content: attr(data-u); position: absolute; right: 8px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 12px; pointer-events: none; }
+.u input { padding-right: 38px; -moz-appearance: textfield; }
+.u input::-webkit-inner-spin-button, .u input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.hint { color: var(--muted); font-size: 12px; margin: 2px 0 6px; }
+.warn { color: var(--error); }
+.caution { color: var(--caution); }
+.ok { color: var(--accent); }
+
+button { font: inherit; font-weight: 600; border: 0; border-radius: 8px; padding: 8px 14px; cursor: pointer; background: var(--accent); color: var(--panel); }
+button:disabled { opacity: .45; cursor: default; }
+button.secondary { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+button.icon { background: transparent; color: var(--muted); padding: 0; font-size: 18px; line-height: 1; min-width: 28px; min-height: 28px; display: inline-grid; place-items: center; border-radius: 6px; }
+button.icon:hover:not(:disabled) { background: var(--line); color: var(--ink); }
+
+.previews { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 16px; }
+@media (max-width: 1100px) { .previews { grid-template-columns: 1fr; } }
+canvas { display: block; max-width: 100%; }
+canvas.flat { width: 100%; height: auto; }
+.piece-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.piece-head h2 { margin: 0; }
+.piece3d { width: 100%; height: 280px; border-radius: 8px; background: var(--bg); }
+.piece3d-large { width: 100%; flex: 1; min-height: 0; border-radius: 8px; background: var(--bg); }
+.loading { display: grid; place-items: center; color: var(--muted); }
+.piece3d canvas, .piece3d-large canvas { width: 100% !important; height: 100% !important; touch-action: none; }
+button.small { padding: 5px 11px; font-size: 12.5px; min-height: 28px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin-top: 8px; }
+.seg button { background: transparent; color: var(--ink); border-radius: 0; padding: 5px 12px; font-weight: 500; font-size: 12.5px; min-height: 30px; }
+.seg button.on { background: var(--accent); color: var(--panel); }
+.modal { position: fixed; inset: 0; background: rgb(0 0 0 / .55); display: grid; place-items: center; z-index: 10; padding: 16px; }
+.modal-body { background: var(--panel); border-radius: 12px; width: min(1200px, 100%); height: min(860px, 100%); padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.modal-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.modal-head h2 { margin: 0; }
+.modal-head .seg { margin-top: 0; }
+.modal-head .hint { margin: 0; flex: 1; }
+.spec { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 12px 0 0; font-variant-numeric: tabular-nums; }
+.spec .updating { color: var(--muted); }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-top: 8px; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.actions, .row-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.tips { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
+.tips summary { cursor: pointer; font-weight: 600; padding: 4px 0; min-height: 28px; }
+.tips ul { margin: 8px 0 0; padding-left: 18px; }
+.tips li { margin: 4px 0; }
+.drop { display: block; border: 1.5px dashed var(--line); border-radius: 8px; padding: 18px 8px; text-align: center; color: var(--muted); cursor: pointer; }
+
+/* The roller lies in the raised preview, and the clay impression sits under it. */
+.roller3d { width: 100%; height: min(54vh, 520px); min-height: 280px; border-radius: 8px; background: var(--bg); }
+.roller3d canvas { width: 100% !important; height: 100% !important; touch-action: none; }
+.imprint { width: 100%; height: auto; border-radius: 6px; }
+.drop input { display: none; }
+.checks { margin: 10px 0 0; padding-left: 18px; }
+.checks li { margin: 3px 0; }
+.spec dt { margin: 0; } .spec dd { margin: 0; }

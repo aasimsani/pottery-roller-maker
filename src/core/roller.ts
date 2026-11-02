@@ -134,3 +134,77 @@ export function toSTL({ positions: p, indices: i }: Mesh): ArrayBuffer {
   }
   return buf;
 }
+
+// A drum prints hollow or solid. A hollow drum is a relief tube of the given wall with an end plate
+// at each end, which is a hub round the axle and spokes out to the tube. The middle stays empty.
+// A solid drum leaves the inside to the slicer's sparse infill.
+export interface DrumBuild {
+  kind: 'hollow' | 'solid';
+  wall: number;    // Wall under the relief, in mm.
+  spokes: number;
+  spokeW: number;  // Spoke thickness, in mm.
+  hub: number;     // Wall around the axle hole, in mm.
+  plate: number;   // Thickness of each end plate along the axle, in mm.
+  infill: number;  // Sparse infill for a solid drum, from 0 to 1. It only feeds the estimate, because the slicer sets it.
+}
+
+export function volume({ positions: p, indices: i }: Mesh): number {
+  let v = 0;
+  for (let t = 0; t < i.length; t += 3) {
+    const a = i[t] * 3, b = i[t + 1] * 3, c = i[t + 2] * 3;
+    v += (p[a] * (p[b + 1] * p[c + 2] - p[b + 2] * p[c + 1]) - p[a + 1] * (p[b] * p[c + 2] - p[b + 2] * p[c])
+      + p[a + 2] * (p[b] * p[c + 1] - p[b + 1] * p[c])) / 6;
+  }
+  return v;
+}
+
+// spoke() is a box from radius r0 to r1 at angle a, from height z0 to z1.
+function spoke(r0: number, r1: number, w: number, a: number, z0: number, z1: number): Mesh {
+  const c = Math.cos(a), s = Math.sin(a), pos = new Float32Array(24);
+  for (let k = 0; k < 8; k++) {
+    const x = k & 1 ? r1 : r0, y = k & 2 ? w / 2 : -w / 2, z = k & 4 ? z1 : z0;
+    pos.set([x * c - y * s, x * s + y * c, z], k * 3);
+  }
+  const quads = [[0, 4, 6, 2], [1, 3, 7, 5], [0, 1, 5, 4], [2, 6, 7, 3], [0, 2, 3, 1], [4, 5, 7, 6]];
+  return { positions: pos, indices: Uint32Array.from(quads.flatMap(([p, q, r, t]) => [p, q, r, p, r, t])) };
+}
+
+const FLAT: Heightmap = { w: 1, h: 1, data: new Float32Array(1) };
+
+// drumParts() returns closed parts that may overlap. ponytail: the slicer unions overlapping shells,
+// so the spokes simply reach 0.5 mm into the tube and the hub. Merge them with a mesh union if a slicer ever objects.
+export function drumParts(m: Heightmap, s: RollerSpec, b: DrumBuild): Mesh[] {
+  const Ri = s.diameter / 2 - s.depth - b.wall, hubR = s.bore / 2 + b.hub;
+  if (b.kind === 'solid' || Ri - hubR < 1 || b.spokes < 1) return [rollerMesh(m, s)];
+  const plate = Math.min(b.plate, s.length / 2), parts = [rollerMesh(m, { ...s, bore: 2 * Ri })];
+  for (const z0 of [0, s.length - plate]) {
+    const hub = rollerMesh(FLAT, { ...s, length: plate, diameter: 2 * hubR, depth: 0, rim: 0, cell: Math.max(s.cell, 1) });
+    for (let k = 2; k < hub.positions.length; k += 3) hub.positions[k] += z0;
+    parts.push(hub);
+    for (let k = 0; k < b.spokes; k++) parts.push(spoke(hubR - 0.5, Ri + 0.5, b.spokeW, (k / b.spokes) * 2 * Math.PI, z0, z0 + plate));
+  }
+  return parts;
+}
+
+export function mergeMeshes(parts: Mesh[]): Mesh {
+  const nv = parts.reduce((n, p) => n + p.positions.length, 0), ni = parts.reduce((n, p) => n + p.indices.length, 0);
+  const positions = new Float32Array(nv), indices = new Uint32Array(ni);
+  let pv = 0, pi = 0;
+  for (const p of parts) {
+    positions.set(p.positions, pv);
+    for (let k = 0; k < p.indices.length; k++) indices[pi + k] = p.indices[k] + pv / 3;
+    pv += p.positions.length; pi += p.indices.length;
+  }
+  return { positions, indices };
+}
+
+// filamentGrams() estimates the filament a drum takes, in PETG at 1.27 g/cm³ by default.
+// A solid drum gets two 0.42 mm walls on its outer and bore surfaces and four 0.2 mm layers top and bottom,
+// with sparse infill inside. A hollow drum's walls are thin enough that the slicer prints them nearly solid.
+export function filamentGrams(parts: Mesh[], s: RollerSpec, b: DrumBuild, density = 1.27): number {
+  const V = parts.reduce((v, p) => v + volume(p), 0);
+  if (b.kind === 'hollow' && parts.length > 1) return (V / 1000) * density;
+  const shell = Math.min(V, 0.84 * Math.PI * (s.diameter + s.bore) * s.length
+    + 2 * 0.8 * Math.PI * ((s.diameter / 2) ** 2 - (s.bore / 2) ** 2));
+  return ((shell + b.infill * (V - shell)) / 1000) * density;
+}

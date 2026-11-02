@@ -24,5 +24,5 @@ export function Roller3D({ mesh, length, diameter }: { mesh: Mesh; length: numbe
     if (framedFor.current !== key) { frameObject(t, m, new THREE.Vector3(0.25, 0.5, 1)); framedFor.current = key; }
     return () => { t.scene.remove(m); g.dispose(); };
   }, [mesh, length, diameter, three]);
-  return <div className="view3d" ref={host} aria-label="3D view of the roller. Drag to turn it, scroll to zoom." />;
+  return <div className="roller3d" ref={host} aria-label="3D view of the roller. Drag to turn it, scroll to zoom." />;
 }
