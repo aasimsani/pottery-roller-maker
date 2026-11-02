@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { DrumBuild } from './core/roller';
+import type { GapFix, LineFix } from './core/fix';
 import type { Piece } from './core/piece';
 import { layersFromMix, newDesignLayer, newLinesLayer, type Layer } from './layers';
 import { builtinRef } from './sources/builtin';
@@ -28,6 +29,8 @@ export interface Settings {
   bedW: number; bedD: number; bedH: number;
   // The print check reads these limits before every download.
   nozzle: number; minPlastic: number; minHole: number; strict: boolean;
+  /** Repairs the print check offers for thin raised lines and narrow gaps. They stay on, so they follow every design change. */
+  fixLines: LineFix; fixGaps: GapFix;
   // Preview
   paintColor: string;
 }
@@ -41,7 +44,7 @@ export const DEFAULTS: Settings = {
   build: { kind: 'hollow', wall: 2, spokes: 6, spokeW: 3, hub: 3, plate: 6, infill: 0.15 },
   res: 0.15, cell: 0.4,
   bedW: 256, bedD: 256, bedH: 256,
-  nozzle: 0.4, minPlastic: 0.8, minHole: 0.8, strict: true,
+  nozzle: 0.4, minPlastic: 0.8, minHole: 0.8, strict: true, fixLines: 'off', fixGaps: 'off',
   paintColor: '#2b4c8c',
 };
 

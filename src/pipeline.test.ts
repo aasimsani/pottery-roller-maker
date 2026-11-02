@@ -29,3 +29,13 @@ test('a tapered band warns that a straight roller skids on it', () => {
   const flared = { name: 'Flared', profile: [{ z: 0, d: 70 }, { z: 95, d: 90 }] };
   expect(computeRoller({ ...s, piece: flared }, [newLinesLayer()], new Map()).checks.map((c) => c.id)).toContain('taper');
 });
+
+test('a gap fix in the settings is applied and counted', () => {
+  // Two lines 0.5 mm apart leave a gap narrower than the 0.8 mm minimum.
+  const a = { ...newLinesLayer(), lines: { ...newLinesLayer().lines, positions: [40, 47], thickness: 3 } };
+  const fine = { ...s, res: 0.25 };
+  const before = computeRoller(fine, [a], new Map()), after = computeRoller({ ...fine, fixGaps: 'fill' }, [a], new Map());
+  expect(before.checks.map((c) => c.id)).toContain('thin-gaps');
+  expect(after.checks.map((c) => c.id)).not.toContain('thin-gaps');
+  expect(after.fixed.gaps).toBeGreaterThan(0);
+});

@@ -26,3 +26,8 @@ test('only underglaze needs deep relief', () => {
 test('thin raised lines and narrow gaps warn, and a thin axle wall is an error', () => {
   expect(ids({ thinReliefSpots: 2, thinGapSpots: 1, boreWall: 2 })).toEqual(['error:bore', 'warn:thin-relief', 'warn:thin-gaps']);
 });
+
+test('thin lines and narrow gaps offer one-click fixes', () => {
+  const fixes = rollerChecks({ ...ok, thinReliefSpots: 1, thinGapSpots: 1 }).map((c) => c.fixes?.map((f) => `${f.key}=${f.value}`));
+  expect(fixes).toEqual([['fixLines=thicken', 'fixLines=remove'], ['fixGaps=fill', 'fixGaps=widen']]);
+});

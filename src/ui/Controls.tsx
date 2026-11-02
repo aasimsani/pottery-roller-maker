@@ -174,6 +174,10 @@ export function Controls({ s, set, result, onPhoto, onScale }: { s: Settings; se
         <Section title="Print check">
           <NumberField label="Thinnest raised line" unit="mm" value={s.minPlastic} min={0.2} max={5} step={0.1} onChange={(v) => set('minPlastic', v)} />
           <NumberField label="Narrowest gap" unit="mm" value={s.minHole} min={0.2} max={5} step={0.1} onChange={(v) => set('minHole', v)} />
+          <SelectField label="Thin raised lines" value={s.fixLines} onChange={(v) => set('fixLines', v)}
+            options={[['off', 'leave them'], ['thicken', 'thicken them'], ['remove', 'remove them']]} />
+          <SelectField label="Narrow gaps" value={s.fixGaps} onChange={(v) => set('fixGaps', v)}
+            options={[['off', 'leave them'], ['fill', 'fill them in'], ['widen', 'widen them']]} />
           <CheckField label="Hold back the STL while the check finds errors" value={s.strict} onChange={(v) => set('strict', v)} />
           <p className="hint">Two nozzle widths is the practical minimum for both. Changing the nozzle under Print resets them, and the detail, to suit it.</p>
         </Section>

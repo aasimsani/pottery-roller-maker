@@ -220,3 +220,4 @@ details.expert > summary:hover { color: var(--accent); }
 .drawer .panel.library { padding: 0; }
 .drawer-close { float: right; }
 @keyframes drawer-in { from { transform: translateX(100%); } }
+.checks .row-actions { margin-top: 6px; }

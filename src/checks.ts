@@ -20,6 +20,8 @@ export interface Check {
   /** An error means the print will fail. A warning means it prints but may work badly. */
   level: 'error' | 'warn';
   message: string;
+  /** One-click repairs. Each sets one fix setting, which the pipeline then applies on every rebuild. */
+  fixes?: { label: string; key: 'fixLines' | 'fixGaps'; value: string }[];
 }
 
 /** Edge clearance kept on every side of the bed, in mm. */
@@ -28,7 +30,7 @@ export const BED_MARGIN = 3;
 // rollerChecks() is the guardrail before download. It returns only the checks that fail, errors first.
 export function rollerChecks(i: RollerCheckInput): Check[] {
   const out: Check[] = [];
-  const add = (ok: boolean, id: string, level: Check['level'], message: string) => { if (!ok) out.push({ id, level, message }); };
+  const add = (ok: boolean, id: string, level: Check['level'], message: string, fixes?: Check['fixes']) => { if (!ok) out.push({ id, level, message, fixes }); };
   const n = (k: number, one: string, many: string) => `${k} ${k > 1 ? many : one}`;
 
   add(i.relief > 0, 'empty', 'error', 'Nothing is raised yet. Add a design, or lower a layer’s threshold.');
@@ -39,9 +41,11 @@ export function rollerChecks(i: RollerCheckInput): Check[] {
   add(i.taper <= Math.max(1, 0.02 * i.potD), 'taper', 'warn',
     `The band narrows by ${i.taper.toFixed(1)} mm across its height, so a straight roller skids on it. Pick a straighter band, or roll a slab and build with it.`);
   add(i.thinReliefSpots === 0, 'thin-relief', 'warn',
-    `${n(i.thinReliefSpots, 'raised line is', 'raised lines are')} narrower than ${i.minPlastic} mm and won't print cleanly. Use Thicken lines on that layer, or make the design bigger.`);
+    `${n(i.thinReliefSpots, 'raised line is', 'raised lines are')} narrower than ${i.minPlastic} mm and won't print cleanly. Thicken or remove ${i.thinReliefSpots > 1 ? 'them' : 'it'} here, or make the design bigger.`,
+    [{ label: 'Thicken them', key: 'fixLines', value: 'thicken' }, { label: 'Remove them', key: 'fixLines', value: 'remove' }]);
   add(i.thinGapSpots === 0, 'thin-gaps', 'warn',
-    `${n(i.thinGapSpots, 'gap between raised parts is', 'gaps between raised parts are')} narrower than ${i.minHole} mm, so ${i.use === 'underglaze' ? 'underglaze' : 'clay'} will fill ${i.thinGapSpots > 1 ? 'them' : 'it'}. Use Clear margin, or make the design bigger.`);
+    `${n(i.thinGapSpots, 'gap between raised parts is', 'gaps between raised parts are')} narrower than ${i.minHole} mm, so ${i.use === 'underglaze' ? 'underglaze' : 'clay'} will fill ${i.thinGapSpots > 1 ? 'them' : 'it'}. Fill ${i.thinGapSpots > 1 ? 'them' : 'it'} in so the parts join, widen ${i.thinGapSpots > 1 ? 'them' : 'it'}, or make the design bigger.`,
+    [{ label: 'Fill them in', key: 'fixGaps', value: 'fill' }, { label: 'Widen them', key: 'fixGaps', value: 'widen' }]);
   add(i.use !== 'underglaze' || i.depth >= 1.5, 'underglaze-depth', 'warn',
     'Shallow relief lets underglaze reach the low parts. 1.5 mm or more keeps them clean.');
   add(!i.solidFallback, 'solid-fallback', 'warn', 'The drum is too thin for spokes, so it prints solid. Use a thinner wall, or more turns per lap for a smaller pot.');

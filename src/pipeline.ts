@@ -1,9 +1,9 @@
 import { geometry, type BandParams, type Geometry } from './core/geometry';
-import { buildMask, countPieces, type Mask, type MaskLayer } from './core/mask';
+import { buildMask, type Mask, type MaskLayer } from './core/mask';
 import { planCells } from './core/layout';
 import { linePeriod, makeLinesTile } from './core/lines';
 import { bandOnPiece, type Band } from './core/piece';
-import { thinFeatures } from './core/thin';
+import { fixRelief, thinOnRoller } from './core/fix';
 import { drumParts, filamentGrams, heightmapFromBits, mergeMeshes, toSTL, type DrumBuild, type RollerSpec } from './core/roller';
 import { rollerChecks, type Check } from './checks';
 import { renderTile } from './render/tile';
@@ -29,6 +29,8 @@ export interface RollerResult {
   /** Raised lines too thin to print, and gaps too narrow to stay clean (1 = too thin). */
   thinRelief: Uint8Array; thinGaps: Uint8Array;
   checks: Check[];
+  /** How many thin lines and narrow gaps the chosen fixes repaired. */
+  fixed: { lines: number; gaps: number };
   layerInfo: Map<string, LayerInfo>;
   /** The exact file Download STL saves: the drum standing on its end. */
   stl: ArrayBuffer;
@@ -103,29 +105,22 @@ export function prepareRoller(s: Settings, layers: Layer[], arts: Map<string, Ar
   return { gp, maskLayers, layerInfo, band, roller };
 }
 
-// thinWrapped() runs thinFeatures() on a pattern that wraps left to right. It pads each side with
-// columns from the other side, so a line that crosses the seam isn't mistaken for a thin stub.
-function thinWrapped(bits: Uint8Array, w: number, h: number, minPx: number): { mask: Uint8Array; spots: number } {
-  const pad = Math.min(w, Math.ceil(minPx) + 2), W = w + 2 * pad, wide = new Uint8Array(W * h);
-  for (let y = 0; y < h; y++) for (let x = 0; x < W; x++) wide[y * W + x] = bits[y * w + (((x - pad) % w) + w) % w];
-  const t = thinFeatures(wide, W, h, minPx, 2 * minPx * minPx).mask, mask = new Uint8Array(w * h);
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) mask[y * w + x] = t[y * W + x + pad];
-  return { mask, spots: countPieces(mask, w, h) };
-}
-
 // finishRoller() builds the pattern, raises it into a drum, and checks it. It touches no DOM,
 // so it can run in a Web Worker and keep the page responsive while you type.
 export function finishRoller(s: Settings, { gp, maskLayers, layerInfo, band, roller }: Prepared): RollerResult {
-  const g = geometry(gp), mask = buildMask(g, maskLayers), n = mask.w * mask.h;
-  const relief = new Uint8Array(n), gaps = new Uint8Array(n);
+  const g = geometry(gp), mask = buildMask(g, maskLayers), n = mask.w * mask.h, linePx = s.minPlastic / s.res, gapPx = s.minHole / s.res;
+  const drawn = new Uint8Array(n);
+  for (let k = 0; k < n; k++) drawn[k] = mask.inside[k] && !mask.solid[k] ? 1 : 0;
+  const { relief, ...fixed } = fixRelief(drawn, mask.w, mask.h, { linePx, gapPx, lines: s.fixLines, gaps: s.fixGaps });
+  // The flat view shows the fixed relief, which is what prints.
   let raised = 0, inside = 0;
   for (let k = 0; k < n; k++) {
     if (!mask.inside[k]) continue;
-    inside++;
-    if (mask.solid[k]) gaps[k] = 1; else { relief[k] = 1; raised++; }
+    inside++; raised += relief[k];
+    mask.solid[k] = relief[k] ? 0 : 1;
   }
-  const thinRelief = thinWrapped(relief, mask.w, mask.h, s.minPlastic / s.res);
-  const thinGaps = thinWrapped(gaps, mask.w, mask.h, s.minHole / s.res);
+  const thinRelief = thinOnRoller(relief, mask.w, mask.h, linePx, 0);
+  const thinGaps = thinOnRoller(relief.map((v) => 1 - v), mask.w, mask.h, gapPx, 1);
 
   const spec: RollerSpec = { diameter: roller.diameter, length: roller.length, depth: s.depth, repeats: 1, rim: s.ends, bore: s.bore, cell: s.cell, mirror: s.mirror };
   const map = heightmapFromBits(relief, mask.w, mask.h, s.soften / s.res);
@@ -139,7 +134,7 @@ export function finishRoller(s: Settings, { gp, maskLayers, layerInfo, band, rol
     use: s.use, depth: s.depth, boreWall: roller.diameter / 2 - s.depth - s.bore / 2, solidFallback: s.build.kind === 'hollow' && parts.length === 1,
   });
   return {
-    g, gp, mask, band, roller, thinRelief: thinRelief.mask, thinGaps: thinGaps.mask, checks, layerInfo, stl,
+    g, gp, mask, band, roller, thinRelief: thinRelief.mask, thinGaps: thinGaps.mask, checks, fixed, layerInfo, stl,
     grams: filamentGrams(parts, spec, s.build), otherGrams: filamentGrams(drumParts(map, coarse, other), coarse, other),
   };
 }

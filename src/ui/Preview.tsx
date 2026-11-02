@@ -22,6 +22,8 @@ interface Props {
   onAddToPlate: () => void;
   onPng: (canvas: HTMLCanvasElement) => void;
   onPaint: (color: string) => void;
+  /** Turns on a repair the print check offers, or turns it off again with 'off'. */
+  onFix: (key: 'fixLines' | 'fixGaps', value: string) => void;
 }
 
 // describe() is the spoken summary of the roller, for the previews' text alternatives.
@@ -30,7 +32,7 @@ function describe(r: RollerResult, s: Settings): string {
   return `A roller ${r.roller.diameter.toFixed(0)} mm across and ${r.roller.length.toFixed(0)} mm long for ${s.piece.name}, ${errors ? `${errors} print check error${errors > 1 ? 's' : ''}` : 'passing the print check'}.`;
 }
 
-export function Preview({ s, result, error, loading, updating, onStl, onAddToPlate, onPng, onPaint }: Props) {
+export function Preview({ s, result, error, loading, updating, onStl, onAddToPlate, onPng, onPaint, onFix }: Props) {
   const flat = useRef<HTMLCanvasElement>(null), dialog = useRef<HTMLDivElement>(null);
   const [mode, setMode] = useState<PieceMode>('painted');
   const [expanded, setExpanded] = useState(false);
@@ -136,9 +138,24 @@ export function Preview({ s, result, error, loading, updating, onStl, onAddToPla
             {r.checks.map((c) => (
               <li key={c.id} className={c.level}>
                 <span aria-hidden="true">{c.level === 'error' ? '✕' : '⚠'}</span>
-                <span><span className="visually-hidden">{c.level === 'error' ? 'Error: ' : 'Warning: '}</span>{c.message}</span>
+                <span>
+                  <span className="visually-hidden">{c.level === 'error' ? 'Error: ' : 'Warning: '}</span>{c.message}
+                  {c.fixes && <span className="row-actions">{c.fixes.map((f) => (
+                    <button key={f.value} className="secondary small" onClick={() => onFix(f.key, f.value)}>{f.label}</button>
+                  ))}</span>}
+                </span>
               </li>
             ))}
+            {s.fixLines !== 'off' && (
+              <li className="note"><span aria-hidden="true">•</span>
+                <span>{s.fixLines === 'thicken' ? 'Thickened' : 'Removed'} {r.fixed.lines} thin raised line{r.fixed.lines === 1 ? '' : 's'}.{' '}
+                  <button className="secondary small" onClick={() => onFix('fixLines', 'off')}>Undo</button></span></li>
+            )}
+            {s.fixGaps !== 'off' && (
+              <li className="note"><span aria-hidden="true">•</span>
+                <span>{s.fixGaps === 'fill' ? 'Filled in' : 'Widened'} {r.fixed.gaps} narrow gap{r.fixed.gaps === 1 ? '' : 's'}.{' '}
+                  <button className="secondary small" onClick={() => onFix('fixGaps', 'off')}>Undo</button></span></li>
+            )}
           </ul>
         </>
       )}
