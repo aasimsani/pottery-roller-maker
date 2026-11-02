@@ -77,3 +77,23 @@ because thin walls with end plates usually beat 15% infill, but not always on a 
 - [x] Replace the stencil pipeline with `prepareRoller()` / `finishRoller()`, sized from the pot: D = pot Ø / turns per lap
 - [x] Port Controls, Preview, the pot view (shows the impression laps times round) and the print view
 - [x] Keep settings and layers under `roller.*` keys, so both apps can share an origin and saved pieces
+
+## MCP (see `docs/rfc_mcp.html`)
+
+Local first: the Worker runs under `wrangler dev`, Vite forwards `/mcp` and `/session` to it, and auth is a
+session token the tab shows after Connect Claude and Turnstile. OAuth replaces the copy-paste step later.
+
+### Phase M1: Pure core (RED → GREEN)
+
+- [x] Failing tests: settings and layer ops with key and type checks, all-or-none batches, offered fixes only
+- [x] Failing tests: the relay matches replies to requests, times out, and drops pending calls when the tab goes
+- [x] Failing tests: a session token only verifies for its own session and secret
+- [x] Failing tests: `imagePrompt()` carries the live roller's aspect ratio and minimum line share
+- [x] Implement `src/mcp/ops.ts`, `worker/relay.ts`, `worker/token.ts` and `src/mcp/prompts.ts` until green
+
+### Phase M2: Worker, session object and MCP route (local, under `wrangler dev`)
+
+- [ ] Failing test: opening a session needs a passing Turnstile token and stays under the per-IP limit
+- [ ] Failing test: `/mcp` refuses a missing or wrong token with 401
+- [ ] Session object holds the tab socket and relays calls, and the MCP route serves the tools and prompts
+- [ ] Vite forwards `/mcp` and `/session` to `wrangler dev`, so the tab and the MCP share one origin
