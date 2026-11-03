@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { DrumBuild } from './core/roller';
 import type { GapFix, LineFix } from './core/fix';
 import type { Piece } from './core/piece';
-import { layersFromMix, newDesignLayer, newLinesLayer, type Layer } from './layers';
+import { newDesignLayer, newLinesLayer, type Layer } from './layers';
 import { builtinRef } from './sources/builtin';
 
 export interface Settings {
@@ -61,27 +61,36 @@ export function settingsFrom(saved: Record<string, unknown> | null): Settings {
   return { ...s, build: { ...DEFAULTS.build, ...(s.build ?? {}) } };
 }
 
-// initialLayers() starts from the mix an earlier version saved, or from a sprig between two framing lines.
+// initialLayers() starts from a sprig between two framing lines.
 export function initialLayers(): Layer[] {
-  try {
-    const mix = JSON.parse(localStorage.getItem('mix') ?? 'null');
-    if (Array.isArray(mix) && mix.length) return layersFromMix(mix);
-  } catch { /* storage blocked or corrupt */ }
   return [newDesignLayer(builtinRef('Leafy sprig')), newLinesLayer()];
 }
 
+// All three pottery apps run on aasimsani.net and share one localStorage, so each app keeps its keys under its own
+// prefix. Saved pieces stay shared with the stencil maker, which saves the same pots.
+const APP = 'roller.';
+const SHARED = new Set<string>(['pieces']);
+export const storageKey = (key: string) => (SHARED.has(key) ? key : APP + key);
+
+// The roller started with prefixed keys, so it has no older values to read.
+const LEGACY: Record<string, (v: unknown) => unknown> = {};
+
 // usePersistent() is useState backed by localStorage. Storage can be missing or full
 // (private windows, large uploaded images), so failures fall back to in-memory state.
+// The first load reads what an older version saved under the bare key, through LEGACY, and saves it under the prefix.
 export function usePersistent<T>(key: string, initial: T | (() => T)): [T, (v: T | ((prev: T) => T)) => void] {
+  const full = storageKey(key);
   const [value, setValue] = useState<T>(() => {
     try {
-      const raw = localStorage.getItem(key);
+      const raw = localStorage.getItem(full);
       if (raw) return JSON.parse(raw) as T;
+      const old = full !== key && LEGACY[key] ? localStorage.getItem(key) : null;
+      if (old) return LEGACY[key](JSON.parse(old)) as T;
     } catch { /* fall through to the initial value */ }
     return typeof initial === 'function' ? (initial as () => T)() : initial;
   });
   useEffect(() => {
-    try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage full or blocked */ }
-  }, [key, value]);
+    try { localStorage.setItem(full, JSON.stringify(value)); } catch { /* storage full or blocked */ }
+  }, [full, value]);
   return [value, setValue];
 }

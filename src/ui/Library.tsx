@@ -18,8 +18,12 @@ const TABS: { id: Tab; label: string; hint: string; remote: boolean }[] = [
   { id: 'upload', label: 'Your images', hint: 'Dark areas become paint. Line art and silhouettes work best.', remote: false },
 ];
 
+// tabInfo() looks up a saved tab. An older version, or a sister app on the same site, may have saved a tab that
+// this library doesn't have, so an unknown tab falls back to the first one rather than crashing the page.
+export const tabInfo = (saved: string) => TABS.find((t) => t.id === saved) ?? TABS[0];
+
 export function Library({ inMix, onAdd }: { inMix: Set<string>; onAdd: (ref: DesignRef) => void }) {
-  const [tab, setTab] = usePersistent<Tab>('library.tab', 'builtin');
+  const [savedTab, setTab] = usePersistent<Tab>('library.tab', 'builtin');
   // An empty query lists everything in local sources and searches "flower" in remote ones.
   const [query, setQuery] = useState('');
   const [page, setPage] = useState<SearchPage>({ items: [] });
@@ -30,7 +34,7 @@ export function Library({ inMix, onAdd }: { inMix: Set<string>; onAdd: (ref: Des
   const [commonsKind, setCommonsKind] = usePersistent<CommonsKind>('library.commonsKind', 'art');
   const [bhlOnly, setBhlOnly] = usePersistent('library.bhlOnly', false);
   const [siKey, setSiKey] = usePersistent('library.smithsonianKey', '');
-  const info = TABS.find((t) => t.id === tab)!;
+  const info = tabInfo(savedTab), tab = info.id;
   const latest = useRef(0);
   const grid = useRef<HTMLDivElement>(null);
   const revealFrom = useRef(-1); // index of the first card a Load more added

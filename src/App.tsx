@@ -29,10 +29,10 @@ const download = (blob: Blob, name: string) => {
 };
 
 export function App() {
-  const [saved, setSettings] = usePersistent<Record<string, unknown> | null>('roller.settings', null);
+  const [saved, setSettings] = usePersistent<Record<string, unknown> | null>('settings', null);
   const s = useMemo(() => settingsFrom(saved), [saved]); // fills in defaults and converts older saves
   const set = <K extends keyof Settings>(key: K, value: Settings[K]) => setSettings((prev) => ({ ...settingsFrom(prev), [key]: value }));
-  const [layers, setLayers] = usePersistent<Layer[]>('roller.layers', initialLayers);
+  const [layers, setLayers] = usePersistent<Layer[]>('layers', initialLayers);
   const refs = useMemo(() => layers.flatMap((l) => (l.ref ? [l.ref] : [])), [layers]);
   const [arts, setArts] = useState(new Map<string, Art>());
   const [artErrors, setArtErrors] = useState(new Map<string, string>());
