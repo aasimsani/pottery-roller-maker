@@ -29,6 +29,8 @@ tool forks the closest existing app rather than starting fresh.
   runs on the page, and `finishRoller()` runs in `src/roller.worker.ts`.
 - `src/core/roller.ts` holds the drum maths: height sampling with wrap and mirror, the watertight drum mesh, the hollow
   build (a spoked bottom plate and a 45° cone roof, so no layer starts in mid-air), the filament estimate, and the STL writer.
+- `src/core/handle.ts` builds the optional handle, a U-shaped handle that prints flat with teardrop axle holes, and an
+  axle that prints standing on its head. The pipeline adds both to the result, and the plate and the Print file view carry them.
 - `src/core/fix.ts` finds thin raised lines and narrow gaps on the wrapping pattern, and repairs them when the user
   picks a fix.
 - `src/checks.ts` is the roller's print check. Each check may offer one-click fixes, which set `fixLines` or `fixGaps`.

@@ -17,8 +17,11 @@ design library, and layers.
 4. **Add designs** from the library, or your own images, as layers. A layer's repeats count round the pot.
 5. **Choose how it prints.** A hollow drum has spokes at its ends, and a solid drum uses sparse infill. The app shows the
    filament that each build uses.
-6. **Check the roller.** Fix every error that the **Print check** marks.
-7. **Download the STL file.** To print several rollers together, add each one to the plate, and download one 3MF file.
+6. **Add a handle.** Under **Handle**, keep **Print a handle and an axle** on, and set the grip length. The handle prints
+   flat, and the axle prints standing on its head. An 8 mm dowel works instead of the printed axle.
+7. **Check the roller.** Fix every error that the **Print check** marks.
+8. **Download it.** **Download roller + handle (.3mf)** puts the roller, the handle and the axle on one plate.
+   **Download STL** saves the roller alone.
 
 A straight roller rolls cleanly only on a straight wall. The print check warns you when the band tapers.
 

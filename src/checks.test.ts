@@ -4,6 +4,7 @@ import { rollerChecks, type RollerCheckInput } from './checks';
 const ok: RollerCheckInput = {
   diameter: 40, length: 80, bedW: 256, bedD: 256, bedH: 256, potD: 80, taper: 0, relief: 0.3,
   thinReliefSpots: 0, thinGapSpots: 0, use: 'texture', depth: 1.2, boreWall: 10, solidFallback: false, minPlastic: 0.8, minHole: 0.8,
+  handle: 'off',
 };
 const ids = (o: Partial<RollerCheckInput>) => rollerChecks({ ...ok, ...o }).map((c) => `${c.level}:${c.id}`);
 
@@ -30,4 +31,10 @@ test('thin raised lines and narrow gaps warn, and a thin axle wall is an error',
 test('thin lines and narrow gaps offer one-click fixes', () => {
   const fixes = rollerChecks({ ...ok, thinReliefSpots: 1, thinGapSpots: 1 }).map((c) => c.fixes?.map((f) => `${f.key}=${f.value}`));
   expect(fixes).toEqual([['fixLines=thicken', 'fixLines=remove'], ['fixGaps=fill', 'fixGaps=widen']]);
+});
+
+test('handle problems are warnings, because the roller still prints without one', () => {
+  expect(ids({ handle: 'no-bore' })).toEqual(['warn:handle-bore']);
+  expect(ids({ handle: 'too-big' })).toEqual(['warn:handle-bed']);
+  expect(ids({ handle: 'ok' })).toEqual([]);
 });

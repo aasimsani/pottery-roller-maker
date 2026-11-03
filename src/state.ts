@@ -23,6 +23,8 @@ export interface Settings {
   /** Axle hole diameter, in mm. 0 means no hole. */
   bore: number;
   build: DrumBuild;
+  /** Prints a U-shaped handle and an axle with the roller, and the grip's length in mm. */
+  handle: boolean; grip: number;
   /** Raster pixel size for the pattern, and the drum mesh's spacing, in mm. */
   res: number; cell: number;
   // Printer (Bambu Lab P2S defaults)
@@ -42,6 +44,7 @@ export const DEFAULTS: Settings = {
   bandFrom: 15, bandTo: 80, ends: 4,
   laps: 2, use: 'texture', depth: 1.2, soften: 0.3, mirror: true, bore: 8.2,
   build: { kind: 'hollow', wall: 2, spokes: 6, spokeW: 3, hub: 3, plate: 6, infill: 0.15 },
+  handle: true, grip: 90,
   res: 0.15, cell: 0.4,
   bedW: 256, bedD: 256, bedH: 256,
   nozzle: 0.4, minPlastic: 0.8, minHole: 0.8, strict: true, fixLines: 'off', fixGaps: 'off',
