@@ -3,6 +3,7 @@ import {
   diameterForPattern, diameterForPot, drumParts, filamentGrams, heightAt, heightmapFromBits, lengthForDiameter,
   rollerMesh, seamMismatch, toSTL, volume, type DrumBuild, type Heightmap, type Mesh, type RollerSpec,
 } from './roller';
+import { closed, edgeCounts, overhangs } from '../test/meshChecks';
 
 const spec = (o: Partial<RollerSpec> = {}): RollerSpec => ({
   diameter: 40, length: 50, depth: 1.5, repeats: 1, rim: 0, bore: 8, cell: 1, mirror: true, ...o,
@@ -59,15 +60,6 @@ describe('heightmapFromBits', () => {
   });
 });
 
-// edgeCounts() maps each directed edge "a,b" to how often triangles use it.
-function edgeCounts(idx: Uint32Array) {
-  const m = new Map<string, number>();
-  for (let t = 0; t < idx.length; t += 3) for (let k = 0; k < 3; k++) {
-    const key = `${idx[t + k]},${idx[t + (k + 1) % 3]}`;
-    m.set(key, (m.get(key) ?? 0) + 1);
-  }
-  return m;
-}
 describe('rollerMesh', () => {
   for (const bore of [8, 0]) {
     it(`is closed and consistently wound (bore ${bore})`, () => {
@@ -92,28 +84,22 @@ describe('rollerMesh', () => {
   });
 });
 
-const closed = (mesh: Mesh) => {
-  const e = edgeCounts(mesh.indices);
-  return [...e].every(([key, n]) => { const [a, b] = key.split(','); return n === 1 && e.get(`${b},${a}`) === 1; });
-};
 const hollow = (o: Partial<DrumBuild> = {}): DrumBuild => ({ kind: 'hollow', wall: 3, spokes: 4, spokeW: 3, hub: 3, plate: 6, infill: 0.15, ...o });
 
 describe('drumParts', () => {
   it('builds a hollow drum from closed parts that use less plastic than a solid one', () => {
     const s = spec({ cell: 0.5 }), parts = drumParts(ramp(), s, hollow());
-    // The tube, then a hub and its spokes at each end.
-    expect(parts.length).toBe(1 + 2 * (1 + 4));
+    // The tube, the roof, then the bottom hub and its spokes.
+    expect(parts.length).toBe(1 + 1 + 1 + 4);
     for (const p of parts) { expect(closed(p)).toBe(true); expect(volume(p)).toBeGreaterThan(0); }
     expect(parts.reduce((v, p) => v + volume(p), 0)).toBeLessThan(volume(rollerMesh(ramp(), s)) * 0.6);
   });
-  it('keeps the end plates inside the drum length', () => {
-    const s = spec({ cell: 0.5 });
-    for (const p of drumParts(ramp(), s, hollow()).slice(1)) {
-      const z = p.positions.filter((_, k) => k % 3 === 2);
-      expect(Math.min(...z)).toBeGreaterThanOrEqual(0);
-      expect(Math.max(...z)).toBeLessThanOrEqual(s.length);
-      expect(Math.max(...z) - Math.min(...z)).toBeCloseTo(6);
-    }
+  it('keeps the bottom plate on the bed and the roof inside the drum', () => {
+    const s = spec({ cell: 0.5 }), [, top, ...plate] = drumParts(ramp(), s, hollow());
+    const zs = (p: Mesh) => p.positions.filter((_, k) => k % 3 === 2);
+    for (const p of plate) { expect(Math.min(...zs(p))).toBeCloseTo(0); expect(Math.max(...zs(p))).toBeCloseTo(6); }
+    expect(Math.max(...zs(top))).toBeCloseTo(s.length);
+    expect(Math.min(...zs(top))).toBeGreaterThan(6);
   });
   it('falls back to a solid drum when the wall leaves no room for spokes', () => {
     expect(drumParts(ramp(), spec({ diameter: 20 }), hollow({ wall: 6 })).length).toBe(1);
@@ -127,5 +113,20 @@ describe('filamentGrams', () => {
   });
   it('uses less filament at lower infill', () => {
     expect(filamentGrams(solid, s, hollow({ kind: 'solid', infill: 0.1 }))).toBeLessThan(filamentGrams(solid, s, hollow({ kind: 'solid', infill: 1 })) * 0.6);
+  });
+});
+
+describe('hollow drum printability', () => {
+  for (const diameter of [40, 80, 150]) {
+    it(`prints standing up with nothing starting in mid-air (Ø${diameter})`, () => {
+      const s = spec({ diameter, length: 90, cell: 1 });
+      const parts = drumParts(flat(0), s, hollow());
+      expect(parts.length).toBeGreaterThan(1);
+      for (const p of parts) { expect(closed(p)).toBe(true); expect(overhangs(p)).toBe(0); }
+    });
+  }
+  it('still uses less plastic than a solid drum', () => {
+    const s = spec({ diameter: 80, length: 90, cell: 1 });
+    expect(drumParts(flat(0), s, hollow()).reduce((v, p) => v + volume(p), 0)).toBeLessThan(volume(rollerMesh(flat(0), s)) * 0.5);
   });
 });

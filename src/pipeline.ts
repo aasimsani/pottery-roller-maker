@@ -5,7 +5,9 @@ import { linePeriod, makeLinesTile } from './core/lines';
 import { bandOnPiece, type Band } from './core/piece';
 import { fixRelief, thinOnRoller } from './core/fix';
 import { drumParts, filamentGrams, heightmapFromBits, mergeMeshes, toSTL, type DrumBuild, type RollerSpec } from './core/roller';
-import { rollerChecks, type Check } from './checks';
+import { BED_MARGIN, rollerChecks, type Check } from './checks';
+import { handleParts } from './core/handle';
+import { packPlate } from './core/plate';
 import { renderTile } from './render/tile';
 import { refKey, type Art } from './render/art';
 import type { Layer } from './layers';
@@ -36,6 +38,8 @@ export interface RollerResult {
   stl: ArrayBuffer;
   /** Filament for this build, and for the other build, in grams of PETG. */
   grams: number; otherGrams: number;
+  /** The handle, which prints flat, and its axle, which prints standing up. Both are absent when the handle is off. */
+  handle?: { stl: ArrayBuffer; axleStl: ArrayBuffer; size: [number, number, number] };
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
@@ -128,13 +132,26 @@ export function finishRoller(s: Settings, { gp, maskLayers, layerInfo, band, rol
   // The other build's estimate uses a coarse mesh, which is quick and close enough for grams.
   const other: DrumBuild = { ...s.build, kind: s.build.kind === 'hollow' ? 'solid' : 'hollow' }, coarse = { ...spec, cell: Math.max(spec.cell, 1.5) };
 
+  // The handle needs the roller's axle hole, and it must fit the bed lying flat.
+  let handle: RollerResult['handle'], handleState: 'off' | 'ok' | 'no-bore' | 'too-big' = 'off';
+  if (s.handle && s.bore <= 0) handleState = 'no-bore';
+  else if (s.handle) {
+    const h = handleParts({ rollerLength: roller.length, rollerDiameter: roller.diameter, bore: s.bore, grip: s.grip }), fork = mergeMeshes(h.fork);
+    const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+    for (let k = 0; k < fork.positions.length; k++) { lo[k % 3] = Math.min(lo[k % 3], fork.positions[k]); hi[k % 3] = Math.max(hi[k % 3], fork.positions[k]); }
+    const size: [number, number, number] = [hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]];
+    handle = { stl: toSTL(fork), axleStl: toSTL(h.axle), size };
+    handleState = packPlate([[size[0], size[1]]], s.bedW, s.bedD, 0, BED_MARGIN) ? 'ok' : 'too-big';
+  }
+
   const checks = rollerChecks({
     diameter: roller.diameter, length: roller.length, bedW: s.bedW, bedD: s.bedD, bedH: s.bedH, potD: roller.potD, taper: roller.taper,
     relief: inside ? raised / inside : 0, thinReliefSpots: thinRelief.spots, thinGapSpots: thinGaps.spots, minPlastic: s.minPlastic, minHole: s.minHole,
     use: s.use, depth: s.depth, boreWall: roller.diameter / 2 - s.depth - s.bore / 2, solidFallback: s.build.kind === 'hollow' && parts.length === 1,
+    handle: handleState,
   });
   return {
-    g, gp, mask, band, roller, thinRelief: thinRelief.mask, thinGaps: thinGaps.mask, checks, fixed, layerInfo, stl,
+    g, gp, mask, band, roller, thinRelief: thinRelief.mask, thinGaps: thinGaps.mask, checks, fixed, layerInfo, stl, handle,
     grams: filamentGrams(parts, spec, s.build), otherGrams: filamentGrams(drumParts(map, coarse, other), coarse, other),
   };
 }

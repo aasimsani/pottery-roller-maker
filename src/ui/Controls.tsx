@@ -130,6 +130,17 @@ export function Controls({ s, set, result, onPhoto, onScale }: { s: Settings; se
         <p className="hint">8.2 mm takes an 8 mm dowel or rod. Set 0 for no hole.</p>
       </Section>
 
+      <Section title="Handle">
+        <CheckField label="Print a handle and an axle with the roller" value={s.handle} onChange={(v) => set('handle', v)} />
+        {s.handle && (
+          <>
+            <NumberField label="Grip length" unit="mm" value={s.grip} min={40} max={160} step={5} onChange={(v) => set('grip', v)} />
+            <p className="hint">The handle prints flat, and the axle prints standing on its head. The axle is Ø{Math.max(0, s.bore - 0.4).toFixed(1)} mm, so the roller spins on it, and it pushes snugly into the handle's arms. A {Math.round(s.bore)} mm dowel works instead of the printed axle.</p>
+            {result?.handle && <p className="hint">The handle is {result.handle.size[0].toFixed(0)} × {result.handle.size[1].toFixed(0)} × {result.handle.size[2].toFixed(0)} mm. <b>Download roller + handle</b> puts all three parts on one plate.</p>}
+          </>
+        )}
+      </Section>
+
       <Section title="Print">
         <NumberField label="Nozzle" unit="mm" value={s.nozzle} min={0.1} max={1.2} step={0.05} onChange={setNozzle} />
         <div className="seg" role="group" aria-label="Common nozzles">
@@ -148,13 +159,13 @@ export function Controls({ s, set, result, onPhoto, onScale }: { s: Settings; se
             <NumberField label="Spokes" unit="×" value={b.spokes} min={1} max={16} step={1} onChange={(v) => setB({ spokes: Math.round(v) })} />
             <NumberField label="Spoke thickness" unit="mm" value={b.spokeW} min={1.2} max={10} step={0.2} onChange={(spokeW) => setB({ spokeW })} />
             <NumberField label="Wall round the axle" unit="mm" value={b.hub} min={1.2} max={10} step={0.2} onChange={(hub) => setB({ hub })} />
-            <NumberField label="End plate thickness" unit="mm" value={b.plate} min={2} max={30} step={1} onChange={(plate) => setB({ plate })} />
-            <p className="hint">Each end has a plate of spokes round the axle, and the middle stays empty. The top plate's spokes bridge from the axle to the wall.</p>
+            <NumberField label="Bottom plate thickness" unit="mm" value={b.plate} min={2} max={30} step={1} onChange={(plate) => setB({ plate })} />
+            <p className="hint">The bottom has a plate of spokes round the axle, and the top has a 45° cone roof. It prints standing up with no supports, because every layer rests on the one below it.</p>
           </>
         ) : (
           <>
             <NumberField label="Infill" unit="%" value={Math.round(b.infill * 100)} min={0} max={100} step={5} onChange={(v) => setB({ infill: v / 100 })} />
-            <p className="hint">Set the same sparse infill in Bambu Studio. 10–15% gyroid is plenty for a roller.</p>
+            <p className="hint">Set the same sparse infill in Bambu Studio. For the least filament, pick Lightning infill, which only grows where the top needs holding up.</p>
           </>
         )}
         {result && <p className={`hint ${result.grams <= result.otherGrams ? 'ok' : 'caution'}`}>

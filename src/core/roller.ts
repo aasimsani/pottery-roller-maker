@@ -129,16 +129,17 @@ export function toSTL({ positions: p, indices: i }: Mesh): ArrayBuffer {
   return buf;
 }
 
-// A drum prints hollow or solid. A hollow drum is a relief tube of the given wall with an end plate
-// at each end, which is a hub round the axle and spokes out to the tube. The middle stays empty.
-// A solid drum leaves the inside to the slicer's sparse infill.
+// A drum prints hollow or solid, standing on its end. A hollow drum is a relief tube of the given wall, with a plate
+// of spokes round the axle at the bottom and a 45° cone roof at the top. The bottom plate sits on the bed. The cone
+// rises from the tube wall to the axle hole, so every layer of the roof rests on the one below and nothing has to
+// bridge. A solid drum leaves the inside to the slicer's sparse infill.
 export interface DrumBuild {
   kind: 'hollow' | 'solid';
   wall: number;    // Wall under the relief, in mm.
   spokes: number;
   spokeW: number;  // Spoke thickness, in mm.
   hub: number;     // Wall around the axle hole, in mm.
-  plate: number;   // Thickness of each end plate along the axle, in mm.
+  plate: number;   // Thickness of the bottom plate, and of the hub ring above the roof, along the axle, in mm.
   infill: number;  // Sparse infill for a solid drum, from 0 to 1. It only feeds the estimate, because the slicer sets it.
 }
 
@@ -165,18 +166,43 @@ function spoke(r0: number, r1: number, w: number, a: number, z0: number, z1: num
 
 const FLAT: Heightmap = { w: 1, h: 1, data: new Float32Array(1) };
 
+// latheMesh() spins a closed (r, z) outline round the z axis into a closed solid. The outline must stay off the axis.
+// The outline can run either way round, because the mesh flips its winding when its volume comes out negative.
+export function latheMesh(outline: [number, number][], segments: number): Mesh {
+  const n = outline.length, positions = new Float32Array(n * segments * 3), idx: number[] = [];
+  for (let s = 0; s < segments; s++) {
+    const a = (s / segments) * 2 * Math.PI, c = Math.cos(a), sn = Math.sin(a);
+    outline.forEach(([r, z], k) => positions.set([r * c, r * sn, z], (s * n + k) * 3));
+  }
+  for (let s = 0; s < segments; s++) for (let k = 0; k < n; k++) {
+    const s2 = (s + 1) % segments, k2 = (k + 1) % n;
+    idx.push(s * n + k, s2 * n + k, s2 * n + k2, s * n + k, s2 * n + k2, s * n + k2);
+  }
+  const mesh = { positions, indices: Uint32Array.from(idx) };
+  if (volume(mesh) < 0) for (let t = 0; t < mesh.indices.length; t += 3) [mesh.indices[t + 1], mesh.indices[t + 2]] = [mesh.indices[t + 2], mesh.indices[t + 1]];
+  return mesh;
+}
+
+// roof() is the top of a hollow drum: a 45° cone from just inside the tube wall down to the axle hole, then the hub
+// ring up to the top face. The cone's underside slopes at exactly 45°, which a printer lays without support.
+// It returns null when the drum is too short to fit the cone above the bottom plate.
+function roof(Ri: number, hubR: number, rb: number, length: number, b: DrumBuild, segments: number): Mesh | null {
+  const outer = Ri + 0.5, rise = outer - rb, z0 = length - b.plate - rise, h = b.wall;
+  if (z0 < b.plate + 1) return null;
+  return latheMesh([[outer, z0], [outer, z0 + h], [hubR, z0 + h + outer - hubR], [hubR, length], [rb, length], [rb, z0 + rise]], segments);
+}
+
 // drumParts() returns closed parts that may overlap. ponytail: the slicer unions overlapping shells,
-// so the spokes simply reach 0.5 mm into the tube and the hub. Merge them with a mesh union if a slicer ever objects.
+// so the spokes and the roof simply reach 0.5 mm into the tube and the hub. Merge them with a mesh union if a slicer ever objects.
 export function drumParts(m: Heightmap, s: RollerSpec, b: DrumBuild): Mesh[] {
   const Ri = s.diameter / 2 - s.depth - b.wall, hubR = s.bore / 2 + b.hub;
-  if (b.kind === 'solid' || Ri - hubR < 1 || b.spokes < 1) return [rollerMesh(m, s)];
-  const plate = Math.min(b.plate, s.length / 2), parts = [rollerMesh(m, { ...s, bore: 2 * Ri })];
-  for (const z0 of [0, s.length - plate]) {
-    const hub = rollerMesh(FLAT, { ...s, length: plate, diameter: 2 * hubR, depth: 0, rim: 0, cell: Math.max(s.cell, 1) });
-    for (let k = 2; k < hub.positions.length; k += 3) hub.positions[k] += z0;
-    parts.push(hub);
-    for (let k = 0; k < b.spokes; k++) parts.push(spoke(hubR - 0.5, Ri + 0.5, b.spokeW, (k / b.spokes) * 2 * Math.PI, z0, z0 + plate));
-  }
+  // A drum with no axle hole still gets a 1 mm hole up the middle, because the cone can't close on the axis itself.
+  const rb = Math.max(s.bore / 2, 1), segments = Math.max(32, Math.round((2 * Math.PI * Ri) / Math.max(s.cell, 1)));
+  const top = b.kind === 'solid' || Ri - hubR < 1 || b.spokes < 1 ? null : roof(Ri, hubR, rb, s.length, b, segments);
+  if (!top) return [rollerMesh(m, s)];
+  const plate = b.plate, parts = [rollerMesh(m, { ...s, bore: 2 * Ri }), top];
+  parts.push(rollerMesh(FLAT, { ...s, length: plate, diameter: 2 * hubR, depth: 0, rim: 0, cell: Math.max(s.cell, 1) }));
+  for (let k = 0; k < b.spokes; k++) parts.push(spoke(hubR - 0.5, Ri + 0.5, b.spokeW, (k / b.spokes) * 2 * Math.PI, 0, plate));
   return parts;
 }
 

@@ -13,6 +13,8 @@ export interface RollerCheckInput {
   boreWall: number;
   /** True when a hollow drum had no room for spokes and printed solid. */
   solidFallback: boolean;
+  /** Whether the handle is off, fine, missing its axle hole, or too big for the bed. */
+  handle: 'off' | 'ok' | 'no-bore' | 'too-big';
 }
 
 export interface Check {
@@ -48,6 +50,8 @@ export function rollerChecks(i: RollerCheckInput): Check[] {
     [{ label: 'Fill them in', key: 'fixGaps', value: 'fill' }, { label: 'Widen them', key: 'fixGaps', value: 'widen' }]);
   add(i.use !== 'underglaze' || i.depth >= 1.5, 'underglaze-depth', 'warn',
     'Shallow relief lets underglaze reach the low parts. 1.5 mm or more keeps them clean.');
+  add(i.handle !== 'no-bore', 'handle-bore', 'warn', 'The handle needs an axle hole. Set the axle hole above 0, or turn the handle off.');
+  add(i.handle !== 'too-big', 'handle-bed', 'warn', 'The handle is bigger than the bed. Shorten its grip.');
   add(!i.solidFallback, 'solid-fallback', 'warn', 'The drum is too thin for spokes, so it prints solid. Use a thinner wall, or more turns per lap for a smaller pot.');
   return out.sort((a, b) => (a.level === b.level ? 0 : a.level === 'error' ? -1 : 1));
 }

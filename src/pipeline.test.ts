@@ -39,3 +39,16 @@ test('a gap fix in the settings is applied and counted', () => {
   expect(after.checks.map((c) => c.id)).not.toContain('thin-gaps');
   expect(after.fixed.gaps).toBeGreaterThan(0);
 });
+
+test('a roller can come with a handle and an axle, each its own STL', () => {
+  const r = computeRoller({ ...s, handle: true }, [newLinesLayer()], new Map());
+  expect(r.handle).toBeDefined();
+  for (const stl of [r.handle!.stl, r.handle!.axleStl]) expect(new DataView(stl).getUint32(80, true)).toBe((stl.byteLength - 84) / 50);
+  expect(r.checks.map((c) => c.id)).toEqual([]);
+});
+
+test('the handle needs an axle hole, and it warns when it is bigger than the bed', () => {
+  expect(computeRoller({ ...s, handle: true, bore: 0 }, [newLinesLayer()], new Map()).checks.map((c) => c.id)).toContain('handle-bore');
+  expect(computeRoller({ ...s, handle: true, bedW: 100, bedD: 100 }, [newLinesLayer()], new Map()).checks.map((c) => c.id)).toContain('handle-bed');
+  expect(computeRoller({ ...s, handle: false }, [newLinesLayer()], new Map()).handle).toBeUndefined();
+});

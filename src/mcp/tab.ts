@@ -140,7 +140,13 @@ export function makeHandlers(api: TabApi): Record<string, Handler> {
       if (!result) throw new Error('The roller hasn\'t finished building yet.');
       let blob: Blob;
       if (format === 'stl') blob = new Blob([result.stl.slice(0)], { type: 'model/stl' });
-      else if (format === '3mf') blob = new Blob([(await plate3mf([{ name, stl: result.stl.slice(0) }], s.bedW, s.bedD)) as BlobPart], { type: 'model/3mf' });
+      else if (format === '3mf') {
+        // The plate carries the handle and the axle too, when the handle is on.
+        const parts = [{ name, stl: result.stl.slice(0) }, ...(result.handle ? [{ name: `${name}_handle`, stl: result.handle.stl.slice(0) }, { name: `${name}_axle`, stl: result.handle.axleStl.slice(0) }] : [])];
+        const zip = await plate3mf(parts, s.bedW, s.bedD);
+        if (!zip) throw new Error('The roller and its handle don\'t fit on one plate. Shorten the grip, or export the STL.');
+        blob = new Blob([zip as BlobPart], { type: 'model/3mf' });
+      }
       else blob = await new Promise<Blob>((ok, fail) => flatCanvas()?.toBlob((b) => (b ? ok(b) : fail(new Error('No flat preview.')))) ?? fail(new Error('No flat preview.')));
       api.download(blob, `${name}.${format}`);
       return { file: `${name}.${format}`, bytes: blob.size, savedTo: 'the browser\'s downloads folder' };
