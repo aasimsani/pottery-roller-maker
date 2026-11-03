@@ -101,19 +101,17 @@ const hollow = (o: Partial<DrumBuild> = {}): DrumBuild => ({ kind: 'hollow', wal
 describe('drumParts', () => {
   it('builds a hollow drum from closed parts that use less plastic than a solid one', () => {
     const s = spec({ cell: 0.5 }), parts = drumParts(ramp(), s, hollow());
-    // The tube, then a hub and its spokes at each end.
-    expect(parts.length).toBe(1 + 2 * (1 + 4));
+    // The tube, the roof, then the bottom hub and its spokes.
+    expect(parts.length).toBe(1 + 1 + 1 + 4);
     for (const p of parts) { expect(closed(p)).toBe(true); expect(volume(p)).toBeGreaterThan(0); }
     expect(parts.reduce((v, p) => v + volume(p), 0)).toBeLessThan(volume(rollerMesh(ramp(), s)) * 0.6);
   });
-  it('keeps the end plates inside the drum length', () => {
-    const s = spec({ cell: 0.5 });
-    for (const p of drumParts(ramp(), s, hollow()).slice(1)) {
-      const z = p.positions.filter((_, k) => k % 3 === 2);
-      expect(Math.min(...z)).toBeGreaterThanOrEqual(0);
-      expect(Math.max(...z)).toBeLessThanOrEqual(s.length);
-      expect(Math.max(...z) - Math.min(...z)).toBeCloseTo(6);
-    }
+  it('keeps the bottom plate on the bed and the roof inside the drum', () => {
+    const s = spec({ cell: 0.5 }), [, top, ...plate] = drumParts(ramp(), s, hollow());
+    const zs = (p: Mesh) => p.positions.filter((_, k) => k % 3 === 2);
+    for (const p of plate) { expect(Math.min(...zs(p))).toBeCloseTo(0); expect(Math.max(...zs(p))).toBeCloseTo(6); }
+    expect(Math.max(...zs(top))).toBeCloseTo(s.length);
+    expect(Math.min(...zs(top))).toBeGreaterThan(6);
   });
   it('falls back to a solid drum when the wall leaves no room for spokes', () => {
     expect(drumParts(ramp(), spec({ diameter: 20 }), hollow({ wall: 6 })).length).toBe(1);
@@ -127,5 +125,36 @@ describe('filamentGrams', () => {
   });
   it('uses less filament at lower infill', () => {
     expect(filamentGrams(solid, s, hollow({ kind: 'solid', infill: 0.1 }))).toBeLessThan(filamentGrams(solid, s, hollow({ kind: 'solid', infill: 1 })) * 0.6);
+  });
+});
+
+// overhangs() counts downward-facing triangles that neither rest on the bed nor slope at 45° or steeper.
+// A printer can't lay plastic on those without support, so a part that has them starts in mid-air.
+function overhangs({ positions: p, indices: i }: Mesh): number {
+  let bad = 0;
+  for (let t = 0; t < i.length; t += 3) {
+    const [a, b, c] = [i[t] * 3, i[t + 1] * 3, i[t + 2] * 3];
+    const ux = p[b] - p[a], uy = p[b + 1] - p[a + 1], uz = p[b + 2] - p[a + 2];
+    const vx = p[c] - p[a], vy = p[c + 1] - p[a + 1], vz = p[c + 2] - p[a + 2];
+    const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx, len = Math.hypot(nx, ny, nz);
+    if (!len) continue;
+    const onBed = Math.max(p[a + 2], p[b + 2], p[c + 2]) < 1e-6;
+    if (!onBed && nz / len < -Math.SQRT1_2 - 1e-3) bad++;
+  }
+  return bad;
+}
+
+describe('hollow drum printability', () => {
+  for (const diameter of [40, 80, 150]) {
+    it(`prints standing up with nothing starting in mid-air (Ø${diameter})`, () => {
+      const s = spec({ diameter, length: 90, cell: 1 });
+      const parts = drumParts(flat(0), s, hollow());
+      expect(parts.length).toBeGreaterThan(1);
+      for (const p of parts) { expect(closed(p)).toBe(true); expect(overhangs(p)).toBe(0); }
+    });
+  }
+  it('still uses less plastic than a solid drum', () => {
+    const s = spec({ diameter: 80, length: 90, cell: 1 });
+    expect(drumParts(flat(0), s, hollow()).reduce((v, p) => v + volume(p), 0)).toBeLessThan(volume(rollerMesh(flat(0), s)) * 0.5);
   });
 });

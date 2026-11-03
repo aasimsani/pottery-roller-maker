@@ -28,7 +28,7 @@ tool forks the closest existing app rather than starting fresh.
   the stencil maker's layer and mask code, raises the result into relief, and runs the print check. `prepareRoller()`
   runs on the page, and `finishRoller()` runs in `src/roller.worker.ts`.
 - `src/core/roller.ts` holds the drum maths: height sampling with wrap and mirror, the watertight drum mesh, the hollow
-  build with spoked end plates, the filament estimate, and the STL writer.
+  build (a spoked bottom plate and a 45° cone roof, so no layer starts in mid-air), the filament estimate, and the STL writer.
 - `src/core/fix.ts` finds thin raised lines and narrow gaps on the wrapping pattern, and repairs them when the user
   picks a fix.
 - `src/checks.ts` is the roller's print check. Each check may offer one-click fixes, which set `fixLines` or `fixGaps`.

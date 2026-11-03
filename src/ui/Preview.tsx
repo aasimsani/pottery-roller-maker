@@ -187,7 +187,7 @@ export function Preview({ s, result, error, loading, updating, onStl, onAddToPla
         <summary>Printing &amp; rolling tips</summary>
         <ul>
           <li><b>Print standing on its end</b>, exactly as exported, with supports off. The relief then prints as clean walls rather than steps.</li>
-          <li><b>Hollow or solid:</b> the Print section shows the filament for both. A hollow drum's top end plate bridges from the axle to the wall, which the P2S handles at its default bridge settings.</li>
+          <li><b>Hollow or solid:</b> the Print section shows the filament for both. A hollow drum has a 45° cone roof, so nothing bridges. For a solid drum, Lightning infill uses the least filament.</li>
           <li><b>Fine lines:</b> a 0.2 mm nozzle keeps them crisp. With a 0.4 mm nozzle, keep raised lines and gaps at least 0.8 mm wide.</li>
           <li><b>PETG or PLA:</b> both work. PLA strings less and gives crisper relief, and PETG takes knocks in the studio better.</li>
           <li><b>Axle:</b> an 8 mm dowel or steel rod through the 8.2 mm hole makes a handle. Hold both ends, or print a fork handle later.</li>
