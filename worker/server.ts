@@ -59,7 +59,16 @@ export function buildServer(callTab: CallTab, mintUploadUrl: () => Promise<strin
     z.object({ id: z.string(), to: z.number().int(), view }), (a) => apply([{ op: 'moveLayer', id: a.id, to: a.to }], a.view));
   tool('apply_fix', 'Press one of the fix buttons the print check offers, as listed by get_state.',
     z.object({ key: z.enum(['fixLines', 'fixGaps']), value: z.string(), view }), (a) => apply([{ op: 'fix', key: a.key, value: a.value }], a.view));
-  tool('batch', 'Apply several changes in one rebuild. Either all apply or none does. Each op is one of: {op:"settings",patch}, {op:"addLayer",kind:"lines"}, {op:"addDesign",source,id}, {op:"addImage",url,name}, {op:"updateLayer",id,patch}, {op:"removeLayer",id}, {op:"moveLayer",id,to}, {op:"fix",key,value}.',
+  tool('fix_spot', 'Fix one spot the print check flags, chosen by its position as shares across (u) and down (v) the flat pattern. A "line" is a thin raised line: thicken it by "by" mm, remove it, or leave it. A "gap" is a narrow gap: widen it by "by" mm, fill it in, or leave it. "leave" keeps the spot as drawn and stops it counting as a warning.',
+    z.object({ kind: z.enum(['line', 'gap']), u: z.number().min(0).max(1), v: z.number().min(0).max(1), action: z.enum(['thicken', 'remove', 'fill', 'widen', 'leave']), by: z.number().min(0).max(10).default(0), view }),
+    (a) => apply([{ op: 'spotFix', fix: { kind: a.kind, u: a.u, v: a.v, action: a.action, by: a.by } }], a.view));
+  tool('list_spots', 'List the spots the print check flags, largest first. Each has a kind ("line" is a thin raised line, "gap" is a narrow gap), a point (u, v) that lies on the spot, its size in mm, and its area. Pass the point to view_spot or fix_spot.',
+    z.object({ kind: z.enum(['line', 'gap', 'all']).default('all'), limit: z.number().int().min(1).max(200).default(50) }), (a) => callTab('listSpots', a));
+  tool('view_spot', 'See one spot up close: a zoomed crop of the flat view round the point (u, v), with a white ring on the point.',
+    z.object({ u: z.number().min(0).max(1), v: z.number().min(0).max(1), zoom: z.number().min(1).max(20).default(4) }), (a) => callTab('viewSpot', a));
+  tool('undo_spot_fix', 'Remove one spot fix by its index in settings.spotFixes, numbered from 0. To remove them all, call update_settings with {"spotFixes": []}.',
+    z.object({ index: z.number().int().min(0), view }), (a) => apply([{ op: 'removeSpotFix', index: a.index }], a.view));
+  tool('batch', 'Apply several changes in one rebuild. Either all apply or none does. Each op is one of: {op:"settings",patch}, {op:"addLayer",kind:"lines"}, {op:"addDesign",source,id}, {op:"addImage",url,name}, {op:"updateLayer",id,patch}, {op:"removeLayer",id}, {op:"moveLayer",id,to}, {op:"fix",key,value}, {op:"spotFix",fix:{kind,u,v,action,by}}, {op:"removeSpotFix",index}.',
     z.object({ ops: z.array(z.record(z.string(), z.unknown())).min(1), view }), (a) => apply(a.ops, a.view));
   tool('checkpoint', 'Save the current design under a name, with its preview, before you experiment.',
     z.object({ name: z.string() }), (a) => callTab('checkpoint', a));

@@ -33,6 +33,9 @@ tool forks the closest existing app rather than starting fresh.
   axle that prints standing on its head. The pipeline adds both to the result, and the plate and the Print file view carry them.
 - `src/core/fix.ts` finds thin raised lines and narrow gaps on the wrapping pattern, and repairs them when the user
   picks a fix.
+- Spot fixes: `src/ui/SpotFixer.tsx` turns a click on the flat view into a fix for one flagged spot, saved in
+  `settings.spotFixes` as shares (u, v) of the pattern. `fixRelief()` applies them first, and `dropSpots()` takes spots
+  left as drawn out of the print check's counts.
 - `src/checks.ts` is the roller's print check. Each check may offer one-click fixes, which set `fixLines` or `fixGaps`.
 - `src/state.ts` holds the settings. `nozzleSettings()` fits the minimum widths and the detail to a nozzle.
 - `src/ui/` holds the panels and the three.js views. `Piece3D.tsx` shows the impression round the pot, and

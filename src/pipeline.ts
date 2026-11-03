@@ -3,7 +3,7 @@ import { buildMask, type Mask, type MaskLayer } from './core/mask';
 import { planCells } from './core/layout';
 import { linePeriod, makeLinesTile } from './core/lines';
 import { bandOnPiece, type Band } from './core/piece';
-import { fixRelief, thinOnRoller } from './core/fix';
+import { dropSpots, fixRelief, thinOnRoller } from './core/fix';
 import { drumParts, filamentGrams, heightmapFromBits, mergeMeshes, toSTL, type DrumBuild, type RollerSpec } from './core/roller';
 import { BED_MARGIN, rollerChecks, type Check } from './checks';
 import { handleParts } from './core/handle';
@@ -31,8 +31,8 @@ export interface RollerResult {
   /** Raised lines too thin to print, and gaps too narrow to stay clean (1 = too thin). */
   thinRelief: Uint8Array; thinGaps: Uint8Array;
   checks: Check[];
-  /** How many thin lines and narrow gaps the chosen fixes repaired. */
-  fixed: { lines: number; gaps: number };
+  /** How many thin lines and narrow gaps the fixes for everything repaired, and how many spot fixes found their spot. */
+  fixed: { lines: number; gaps: number; spots: number };
   layerInfo: Map<string, LayerInfo>;
   /** The exact file Download STL saves: the drum standing on its end. */
   stl: ArrayBuffer;
@@ -115,7 +115,12 @@ export function finishRoller(s: Settings, { gp, maskLayers, layerInfo, band, rol
   const g = geometry(gp), mask = buildMask(g, maskLayers), n = mask.w * mask.h, linePx = s.minPlastic / s.res, gapPx = s.minHole / s.res;
   const drawn = new Uint8Array(n);
   for (let k = 0; k < n; k++) drawn[k] = mask.inside[k] && !mask.solid[k] ? 1 : 0;
-  const { relief, ...fixed } = fixRelief(drawn, mask.w, mask.h, { linePx, gapPx, lines: s.fixLines, gaps: s.fixGaps });
+  const at = (f: { u: number; v: number }) => ({ x: f.u * mask.w, y: f.v * mask.h });
+  const { relief, ...fixed } = fixRelief(drawn, mask.w, mask.h, {
+    linePx, gapPx, lines: s.fixLines, gaps: s.fixGaps,
+    lineByPx: (s.fixLinesBy || s.minPlastic) / s.res, gapByPx: (s.fixGapsBy || s.minHole) / s.res,
+    spots: s.spotFixes.map((f) => ({ kind: f.kind, ...at(f), action: f.action, byPx: f.by / s.res })),
+  });
   // The flat view shows the fixed relief, which is what prints.
   let raised = 0, inside = 0;
   for (let k = 0; k < n; k++) {
@@ -123,8 +128,10 @@ export function finishRoller(s: Settings, { gp, maskLayers, layerInfo, band, rol
     inside++; raised += relief[k];
     mask.solid[k] = relief[k] ? 0 : 1;
   }
-  const thinRelief = thinOnRoller(relief, mask.w, mask.h, linePx, 0);
-  const thinGaps = thinOnRoller(relief.map((v) => 1 - v), mask.w, mask.h, gapPx, 1);
+  // Spots the user chose to leave stay as drawn, and they drop out of the print check's counts.
+  const left = (kind: 'line' | 'gap') => s.spotFixes.filter((f) => f.kind === kind && f.action === 'leave').map(at);
+  const thinRelief = dropSpots(thinOnRoller(relief, mask.w, mask.h, linePx, 0).mask, mask.w, mask.h, left('line'));
+  const thinGaps = dropSpots(thinOnRoller(relief.map((v) => 1 - v), mask.w, mask.h, gapPx, 1).mask, mask.w, mask.h, left('gap'));
 
   const spec: RollerSpec = { diameter: roller.diameter, length: roller.length, depth: s.depth, repeats: 1, rim: s.ends, bore: s.bore, cell: s.cell, mirror: s.mirror };
   const map = heightmapFromBits(relief, mask.w, mask.h, s.soften / s.res);

@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { describe, expect, it, test } from 'vitest';
 import { computeRoller } from './pipeline';
 import { DEFAULTS, type Settings } from './state';
 import { newLinesLayer } from './layers';
@@ -51,4 +51,21 @@ test('the handle needs an axle hole, and it warns when it is bigger than the bed
   expect(computeRoller({ ...s, handle: true, bore: 0 }, [newLinesLayer()], new Map()).checks.map((c) => c.id)).toContain('handle-bore');
   expect(computeRoller({ ...s, handle: true, bedW: 100, bedD: 100 }, [newLinesLayer()], new Map()).checks.map((c) => c.id)).toContain('handle-bed');
   expect(computeRoller({ ...s, handle: false }, [newLinesLayer()], new Map()).handle).toBeUndefined();
+});
+
+describe('spot fixes', () => {
+  // Two lines 0.5 mm apart leave one narrow gap, which runs the whole way round at 43.5% of the band height.
+  const a = { ...newLinesLayer(), lines: { ...newLinesLayer().lines, positions: [40, 47], thickness: 3 } };
+  const fine = { ...s, res: 0.25, handle: false };
+  it('a gap left alone stops counting as a warning', () => {
+    const r = computeRoller({ ...fine, spotFixes: [{ kind: 'gap', u: 0.5, v: 0.435, action: 'leave', by: 0 }] }, [a], new Map());
+    expect(r.checks.map((c) => c.id)).not.toContain('thin-gaps');
+  });
+  it('a gap widened by hand gets fixed, and the fix lands on it again after a rebuild at another detail', () => {
+    for (const res of [0.25, 0.2]) {
+      const r = computeRoller({ ...fine, res, spotFixes: [{ kind: 'gap', u: 0.5, v: 0.435, action: 'widen', by: 1 }] }, [a], new Map());
+      expect(r.checks.map((c) => c.id)).not.toContain('thin-gaps');
+      expect(r.fixed.spots).toBe(1);
+    }
+  });
 });

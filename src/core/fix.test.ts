@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fixRelief, thinOnRoller } from './fix';
+import { dropSpots, fixRelief, listSpots, thinOnRoller } from './fix';
 
 // bits() draws a w × h pattern from rows of '#' (raised) and '.' (base).
 const bits = (rows: string[]) => ({ w: rows[0].length, h: rows.length, data: Uint8Array.from(rows.join('').split(''), (c) => (c === '#' ? 1 : 0)) });
@@ -41,5 +41,56 @@ describe('fixRelief', () => {
   });
   it('removes thin raised lines', () => {
     expect(fixRelief(line.data, line.w, line.h, { ...o, lines: 'remove' }).relief.every((v) => v === 0)).toBe(true);
+  });
+});
+
+describe('spot fixes', () => {
+  // Two thin vertical lines, 1 px wide, at x = 5 and x = 15, on a 30 × 30 pattern.
+  const two = () => bits(Array.from({ length: 30 }, () => '.....#.........#..............'));
+  const o = { linePx: 3, gapPx: 3, lines: 'off' as const, gaps: 'off' as const };
+  const width = (relief: Uint8Array, w: number, y: number, x0: number, x1: number) => relief.slice(y * w + x0, y * w + x1).reduce((a, v) => a + v, 0);
+
+  it('changes only the spot it names', () => {
+    const p = two(), f = fixRelief(p.data, p.w, p.h, { ...o, spots: [{ kind: 'line', x: 5, y: 15, action: 'thicken', byPx: 3 }] });
+    expect(width(f.relief, p.w, 15, 0, 10)).toBeGreaterThanOrEqual(3);
+    expect(width(f.relief, p.w, 15, 10, 20)).toBe(1);
+    expect(f.spots).toBe(1);
+  });
+  it('finds a spot from a click a few pixels off the line', () => {
+    const p = two(), f = fixRelief(p.data, p.w, p.h, { ...o, spots: [{ kind: 'line', x: 8, y: 15, action: 'remove', byPx: 0 }] });
+    expect(width(f.relief, p.w, 15, 0, 10)).toBe(0);
+    expect(width(f.relief, p.w, 15, 10, 20)).toBe(1);
+  });
+  it('keeps a spot the user chose to leave, even when every other spot gets fixed', () => {
+    const p = two(), f = fixRelief(p.data, p.w, p.h, { ...o, lines: 'remove', spots: [{ kind: 'line', x: 5, y: 15, action: 'leave', byPx: 0 }] });
+    expect(width(f.relief, p.w, 15, 0, 10)).toBe(1);
+    expect(width(f.relief, p.w, 15, 10, 20)).toBe(0);
+  });
+  it('widens a gap by the amount asked for', () => {
+    const gap = (byPx: number) => {
+      const p = block(1), f = fixRelief(p.data, p.w, p.h, { ...o, spots: [{ kind: 'gap', x: 10, y: 15, action: 'widen', byPx }] });
+      return 18 - width(f.relief, p.w, 15, 2, 20);
+    };
+    expect(gap(4)).toBeGreaterThan(gap(2));
+    expect(gap(2)).toBeGreaterThanOrEqual(3);
+  });
+  it('lets a spot that was left alone drop out of the warning count', () => {
+    const p = two(), t = thinOnRoller(p.data, p.w, p.h, 3, 0);
+    expect(t.spots).toBe(2);
+    expect(dropSpots(t.mask, p.w, p.h, [{ x: 5, y: 15 }]).spots).toBe(1);
+  });
+});
+
+describe('listSpots', () => {
+  it('lists each spot with a point that lies on the spot, even for a curved one', () => {
+    // A ring, whose centre is empty, and a straight line.
+    const rows = Array.from({ length: 40 }, (_, y) => Array.from({ length: 60 }, (_, x) => {
+      const r = Math.hypot(x - 15, y - 20);
+      return (r > 9 && r < 11) || x === 45 ? '#' : '.';
+    }).join(''));
+    const p = bits(rows), t = thinOnRoller(p.data, p.w, p.h, 3, 0), spots = listSpots(t.mask, p.w, p.h);
+    expect(spots).toHaveLength(2);
+    for (const s of spots) expect(t.mask[s.y * p.w + s.x]).toBe(1);
+    expect(spots[0].area).toBeGreaterThanOrEqual(spots[1].area);
   });
 });
