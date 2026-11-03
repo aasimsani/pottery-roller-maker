@@ -38,9 +38,19 @@ export function buildServer(callTab: CallTab, mintUploadUrl: () => Promise<strin
 
   tool('get_state', 'Read the whole design: settings, layers (index 0 is the bottom), roller size, filament, print check and the fixes it offers.',
     z.object({}), () => callTab('getState'));
-  tool('view', 'See the design. "flat" is the unrolled roller, and "3d" is the 3D view in the chosen mode.',
-    z.object({ which: z.enum(['flat', '3d', 'both']).default('both'), mode: z.enum(['painted', 'roller', 'print']).optional().describe('painted shows the impression on the pot') }),
-    (a) => callTab('view', a));
+  const show = z.enum(['drawn', 'prints']).default('drawn').describe('"drawn" marks thin lines red and narrow gaps purple. "prints" shows what reaches the pot, with thin lines dropped and narrow gaps filled.');
+  const grid = z.boolean().default(true).describe('Draw a grid labelled in shares of the pattern, u across and v down, so you can name a place for view_region or fix_spot.');
+  const spots = z.boolean().default(true).describe('Number the flagged spots. The numbers match list_spots.');
+  tool('view', 'See the design. "flat" is the unrolled roller, and "3d" is the 3D view in the chosen mode. Start with describe_coverage, which costs no image.',
+    z.object({
+      which: z.enum(['flat', '3d', 'both']).default('both'), mode: z.enum(['painted', 'roller', 'print']).optional().describe('painted shows the impression on the pot'),
+      show, grid, spots, tiles: z.boolean().default(false).describe('Also return the pattern in four tiles across at full detail. It costs four more images, so use it only when the whole view is too small to judge.'),
+    }), (a) => callTab('view', a));
+  tool('view_region', 'See one box of the flat pattern at full detail, with a finer grid. Coordinates are shares of the pattern, u across and v down, from 0 to 1. Read them off the grid in view.',
+    z.object({ u0: z.number().min(0).max(1), v0: z.number().min(0).max(1), u1: z.number().min(0).max(1), v1: z.number().min(0).max(1), show, grid, spots }),
+    (a) => callTab('viewRegion', a));
+  tool('describe_coverage', 'Describe the pattern in text, with no image. It splits the pattern into cols × rows cells, and gives each cell its share raised and its count of flagged spots. Keep the grid small, because a few cells say enough to find where to look.',
+    z.object({ cols: z.number().int().min(1).max(12).default(4), rows: z.number().int().min(1).max(6).default(2), show }), (a) => callTab('describeCoverage', a));
   tool('update_settings', 'Merge a patch into the settings, such as {"depth": 2} or {"build": {"kind": "solid"}}. Unknown keys and wrong types are rejected.',
     z.object({ patch, view }), (a) => apply([{ op: 'settings', patch: a.patch }], a.view));
   tool('add_lines', 'Add a lines layer on top.', z.object({ view }), (a) => apply([{ op: 'addLayer', kind: 'lines' }], a.view));
@@ -62,7 +72,7 @@ export function buildServer(callTab: CallTab, mintUploadUrl: () => Promise<strin
   tool('fix_spot', 'Fix one spot the print check flags, chosen by its position as shares across (u) and down (v) the flat pattern. A "line" is a thin raised line: thicken it by "by" mm, remove it, or leave it. A "gap" is a narrow gap: widen it by "by" mm, fill it in, or leave it. "leave" keeps the spot as drawn and stops it counting as a warning.',
     z.object({ kind: z.enum(['line', 'gap']), u: z.number().min(0).max(1), v: z.number().min(0).max(1), action: z.enum(['thicken', 'remove', 'fill', 'widen', 'leave']), by: z.number().min(0).max(10).default(0), view }),
     (a) => apply([{ op: 'spotFix', fix: { kind: a.kind, u: a.u, v: a.v, action: a.action, by: a.by } }], a.view));
-  tool('list_spots', 'List the spots the print check flags, largest first. Each has a kind ("line" is a thin raised line, "gap" is a narrow gap), a point (u, v) that lies on the spot, its size in mm, and its area. Pass the point to view_spot or fix_spot.',
+  tool('list_spots', 'List the spots the print check flags, largest first. Each has a kind ("line" is a thin raised line, "gap" is a narrow gap), a point (u, v) that lies on the spot, its size in mm, and its area. Each also has n, the number it carries in the pictures. Pass the point to view_spot or fix_spot.',
     z.object({ kind: z.enum(['line', 'gap', 'all']).default('all'), limit: z.number().int().min(1).max(200).default(50) }), (a) => callTab('listSpots', a));
   tool('view_spot', 'See one spot up close: a zoomed crop of the flat view round the point (u, v), with a white ring on the point.',
     z.object({ u: z.number().min(0).max(1), v: z.number().min(0).max(1), zoom: z.number().min(1).max(20).default(4) }), (a) => callTab('viewSpot', a));
