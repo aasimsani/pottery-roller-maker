@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { DrumBuild } from './core/roller';
-import type { GapFix, LineFix } from './core/fix';
+import type { GapFix, LineFix, SpotAction } from './core/fix';
 import type { Piece } from './core/piece';
 import { newDesignLayer, newLinesLayer, type Layer } from './layers';
 import { builtinRef } from './sources/builtin';
@@ -33,11 +33,18 @@ export interface Settings {
   nozzle: number; minPlastic: number; minHole: number; strict: boolean;
   /** Repairs the print check offers for thin raised lines and narrow gaps. They stay on, so they follow every design change. */
   fixLines: LineFix; fixGaps: GapFix;
+  /** How much the fixes for everything thicken a line or widen a gap, in mm. 0 means just enough to pass. */
+  fixLinesBy: number; fixGapsBy: number;
+  /** Fixes for single spots, placed as shares (0–1) across and down the pattern, so they stay put when the detail changes. */
+  spotFixes: SpotFix[];
   // Preview
   paintColor: string;
 }
 
 export type Use = 'texture' | 'underglaze';
+
+/** A fix for one spot. by is how much to thicken or widen it, in mm. */
+export interface SpotFix { kind: 'line' | 'gap'; u: number; v: number; action: SpotAction; by: number }
 
 export const DEFAULTS: Settings = {
   piece: { name: 'Straight mug', profile: [{ z: 0, d: 80 }, { z: 95, d: 80 }] },
@@ -47,7 +54,7 @@ export const DEFAULTS: Settings = {
   handle: true, grip: 90,
   res: 0.15, cell: 0.4,
   bedW: 256, bedD: 256, bedH: 256,
-  nozzle: 0.4, minPlastic: 0.8, minHole: 0.8, strict: true, fixLines: 'off', fixGaps: 'off',
+  nozzle: 0.4, minPlastic: 0.8, minHole: 0.8, strict: true, fixLines: 'off', fixGaps: 'off', fixLinesBy: 0, fixGapsBy: 0, spotFixes: [],
   paintColor: '#2b4c8c',
 };
 

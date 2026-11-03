@@ -43,3 +43,12 @@ describe('applyOps', () => {
     expect(() => applyOps(start(), [{ op: 'fix', key: 'fixLines', value: 'thicken' }], ctx)).toThrow(/offer/);
   });
 });
+
+describe('spot fixes through the MCP', () => {
+  it('adds a checked spot fix, and refuses a bad action or a point off the pattern', () => {
+    const fix = { kind: 'gap', u: 0.4, v: 0.5, action: 'widen', by: 0.6 };
+    expect(applyOps(start(), [{ op: 'spotFix', fix }], ctx).settings.spotFixes).toEqual([fix]);
+    expect(() => applyOps(start(), [{ op: 'spotFix', fix: { ...fix, action: 'melt' } }], ctx)).toThrow(/action/);
+    expect(() => applyOps(start(), [{ op: 'spotFix', fix: { ...fix, u: 1.4 } }], ctx)).toThrow(/u/);
+  });
+});

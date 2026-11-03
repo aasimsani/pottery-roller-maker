@@ -43,10 +43,10 @@ export function rollerChecks(i: RollerCheckInput): Check[] {
   add(i.taper <= Math.max(1, 0.02 * i.potD), 'taper', 'warn',
     `The band narrows by ${i.taper.toFixed(1)} mm across its height, so a straight roller skids on it. Pick a straighter band, or roll a slab and build with it.`);
   add(i.thinReliefSpots === 0, 'thin-relief', 'warn',
-    `${n(i.thinReliefSpots, 'raised line is', 'raised lines are')} narrower than ${i.minPlastic} mm and won't print cleanly. Thicken or remove ${i.thinReliefSpots > 1 ? 'them' : 'it'} here, or make the design bigger.`,
+    `${n(i.thinReliefSpots, 'raised line is', 'raised lines are')} narrower than ${i.minPlastic} mm and won't print cleanly. Thicken or remove ${i.thinReliefSpots > 1 ? 'them' : 'it'} here, click one on the roller to fix just that spot, or make the design bigger.`,
     [{ label: 'Thicken them', key: 'fixLines', value: 'thicken' }, { label: 'Remove them', key: 'fixLines', value: 'remove' }]);
   add(i.thinGapSpots === 0, 'thin-gaps', 'warn',
-    `${n(i.thinGapSpots, 'gap between raised parts is', 'gaps between raised parts are')} narrower than ${i.minHole} mm, so ${i.use === 'underglaze' ? 'underglaze' : 'clay'} will fill ${i.thinGapSpots > 1 ? 'them' : 'it'}. Fill ${i.thinGapSpots > 1 ? 'them' : 'it'} in so the parts join, widen ${i.thinGapSpots > 1 ? 'them' : 'it'}, or make the design bigger.`,
+    `${n(i.thinGapSpots, 'gap between raised parts is', 'gaps between raised parts are')} narrower than ${i.minHole} mm, so ${i.use === 'underglaze' ? 'underglaze' : 'clay'} will fill ${i.thinGapSpots > 1 ? 'them' : 'it'}. Fill ${i.thinGapSpots > 1 ? 'them' : 'it'} in so the parts join, widen ${i.thinGapSpots > 1 ? 'them' : 'it'}, click one on the roller to fix just that spot, or make the design bigger.`,
     [{ label: 'Fill them in', key: 'fixGaps', value: 'fill' }, { label: 'Widen them', key: 'fixGaps', value: 'widen' }]);
   add(i.use !== 'underglaze' || i.depth >= 1.5, 'underglaze-depth', 'warn',
     'Shallow relief lets underglaze reach the low parts. 1.5 mm or more keeps them clean.');

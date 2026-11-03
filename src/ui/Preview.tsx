@@ -6,6 +6,7 @@ import { drawRoller } from '../render/preview';
 import type { PieceMode } from './Piece3D';
 import { useDialog } from './dialog';
 import { registerViewMode } from '../mcp/viewMode';
+import { describeFix, SpotFixer } from './SpotFixer';
 
 // three.js is about 600 kB, so the 3D view loads after the rest of the page.
 const Piece3D = lazy(() => import('./Piece3D'));
@@ -27,6 +28,8 @@ interface Props {
   onPaint: (color: string) => void;
   /** Turns on a repair the print check offers, or turns it off again with 'off'. */
   onFix: (key: 'fixLines' | 'fixGaps', value: string) => void;
+  /** Sets any setting. The spot fixes and the fix amounts use it. */
+  onSet: <K extends keyof Settings>(key: K, value: Settings[K]) => void;
 }
 
 // describe() is the spoken summary of the roller, for the previews' text alternatives.
@@ -35,7 +38,7 @@ function describe(r: RollerResult, s: Settings): string {
   return `A roller ${r.roller.diameter.toFixed(0)} mm across and ${r.roller.length.toFixed(0)} mm long for ${s.piece.name}, ${errors ? `${errors} print check error${errors > 1 ? 's' : ''}` : 'passing the print check'}.`;
 }
 
-export function Preview({ s, result, error, loading, updating, onStl, onAll, onAddToPlate, onPng, onPaint, onFix }: Props) {
+export function Preview({ s, result, error, loading, updating, onStl, onAll, onAddToPlate, onPng, onPaint, onFix, onSet }: Props) {
   const flat = useRef<HTMLCanvasElement>(null), dialog = useRef<HTMLDivElement>(null);
   const [mode, setMode] = useState<PieceMode>('painted');
   const [expanded, setExpanded] = useState(false);
@@ -92,13 +95,17 @@ export function Preview({ s, result, error, loading, updating, onStl, onAll, onA
       <div className="previews">
         <div>
           <h2 id="preview-title">Roller, unrolled</h2>
-          <canvas ref={flat} className="flat" role="img" aria-label={label ? `Flat view of ${label}` : 'Roller preview'} />
+          <div className="flat-wrap">
+            <canvas ref={flat} className="flat" role="img" aria-label={label ? `Flat view of ${label}` : 'Roller preview'} />
+            {r && <SpotFixer r={r} s={s} set={onSet} />}
+          </div>
           {r && (
             <div className="legend">
               <span><i style={{ background: 'var(--plastic)' }} />raised relief</span>
               <span><i className="hole-swatch" />low base</span>
               {showProblems && r.thinRelief.some((v) => v === 1) && <span><i style={{ background: 'var(--island)' }} />raised line too thin</span>}
               {showProblems && r.thinGaps.some((v) => v === 1) && <span><i style={{ background: 'var(--thin-hole)' }} />gap too narrow</span>}
+              {(r.thinRelief.some((v) => v === 1) || r.thinGaps.some((v) => v === 1)) && <span>Click a red or purple spot to fix just that one.</span>}
             </div>
           )}
         </div>
@@ -155,13 +162,20 @@ export function Preview({ s, result, error, loading, updating, onStl, onAll, onA
             ))}
             {s.fixLines !== 'off' && (
               <li className="note"><span aria-hidden="true">•</span>
-                <span>{s.fixLines === 'thicken' ? 'Thickened' : 'Removed'} {r.fixed.lines} thin raised line{r.fixed.lines === 1 ? '' : 's'}.{' '}
+                <span>{s.fixLines === 'thicken' ? 'Thickened' : 'Removed'} {r.fixed.lines} thin raised line{r.fixed.lines === 1 ? '' : 's'}
+                  {s.fixLines === 'thicken' && <> by <input className="by" type="number" min={0.1} max={5} step={0.1} aria-label="Thicken by, in mm" value={s.fixLinesBy || s.minPlastic} onChange={(e) => onSet('fixLinesBy', e.target.valueAsNumber || 0)} /> mm</>}.{' '}
                   <button className="secondary small" onClick={() => onFix('fixLines', 'off')}>Undo</button></span></li>
             )}
             {s.fixGaps !== 'off' && (
               <li className="note"><span aria-hidden="true">•</span>
-                <span>{s.fixGaps === 'fill' ? 'Filled in' : 'Widened'} {r.fixed.gaps} narrow gap{r.fixed.gaps === 1 ? '' : 's'}.{' '}
+                <span>{s.fixGaps === 'fill' ? 'Filled in' : 'Widened'} {r.fixed.gaps} narrow gap{r.fixed.gaps === 1 ? '' : 's'}
+                  {s.fixGaps === 'widen' && <> by <input className="by" type="number" min={0.1} max={5} step={0.1} aria-label="Widen by, in mm" value={s.fixGapsBy || s.minHole} onChange={(e) => onSet('fixGapsBy', e.target.valueAsNumber || 0)} /> mm</>}.{' '}
                   <button className="secondary small" onClick={() => onFix('fixGaps', 'off')}>Undo</button></span></li>
+            )}
+            {s.spotFixes.length > 0 && (
+              <li className="note"><span aria-hidden="true">•</span>
+                <span>{s.spotFixes.length} spot fix{s.spotFixes.length === 1 ? '' : 'es'}, {r.fixed.spots} on a flagged spot now: {s.spotFixes.map(describeFix).join('; ')}. Click a marker on the roller to undo one.{' '}
+                  <button className="secondary small" onClick={() => onSet('spotFixes', [])}>Clear all</button></span></li>
             )}
           </ul>
         </>
