@@ -1,21 +1,26 @@
 # Pottery Roller Maker
 
-Pottery Roller Maker designs 3D-printable texture and underglaze rollers sized to a pot. It's the sister app of
-[Pottery Stencil Maker](https://github.com/aasimsani/pottery-stencil-maker) and shares its layout, its design library and
-its layers.
+Design texture and underglaze rollers for your pottery, and 3D print them. You describe the pot, and the app sizes the
+roller so that a whole number of turns goes round it. The pattern then meets itself where you finish. The app is a
+sister of [Pottery Stencil Maker](https://github.com/aasimsani/pottery-stencil-maker), and it shares that app's layout,
+design library, and layers.
+
+**Try it in your browser at [aasimsani.net/projects/pottery-roller-maker](https://aasimsani.net/projects/pottery-roller-maker/).** You do not need to install anything.
 
 ## Make a roller
 
-1. **Describe the pot.** Pick a preset, or enter its base Ø, rim Ø and height. Saved pieces are shared with the stencil maker.
-2. **Place the pattern band.** It sets the roller's patterned length.
-3. **Set the roller.** Pick **press a texture** or **print underglaze**, and the turns per lap. The roller's diameter is the
-   pot's divided by the turns, so the pattern meets itself where you finish.
+1. **Describe the pot.** Pick a preset, or enter its base Ø, rim Ø, and height. The stencil maker and the roller maker
+   share your saved pieces.
+2. **Place the pattern band.** The band sets the length of the roller's pattern.
+3. **Set the roller.** Pick **press a texture** or **print underglaze**, and set the turns per lap. The app divides the
+   pot's diameter by the turns to get the roller's diameter, so the pattern meets itself where you finish.
 4. **Add designs** from the library, or your own images, as layers. A layer's repeats count round the pot.
-5. **Choose how it prints.** A hollow drum has spokes at the ends, and a solid drum uses sparse infill. The app shows the
-   filament for both.
-6. **Check it and download the STL**, or add several rollers to a plate and download one 3MF file.
+5. **Choose how it prints.** A hollow drum has spokes at its ends, and a solid drum uses sparse infill. The app shows the
+   filament that each build uses.
+6. **Check the roller.** Fix every error that the **Print check** marks.
+7. **Download the STL file.** To print several rollers together, add each one to the plate, and download one 3MF file.
 
-A straight roller rolls cleanly only on a straight wall. The print check warns when the band tapers.
+A straight roller rolls cleanly only on a straight wall. The print check warns you when the band tapers.
 
 ## Use with Claude
 
@@ -43,9 +48,20 @@ The local Worker uses the Turnstile test key from `.dev.vars.example`. As a resu
 
 ## Run it
 
-```
+You need [Node.js](https://nodejs.org) 22 or later.
+
+```sh
+git clone https://github.com/aasimsani/pottery-roller-maker.git
+cd pottery-roller-maker
 npm install
 npm run dev
 ```
 
-Run `npm test` and `npm run build` before you commit. The plan lives in `docs/plan.md`.
+Then open http://localhost:5181. Everything runs in your browser, and your browser also saves your designs.
+
+Run `npm test` and `npm run build` before you commit. The plan is in `docs/plan.md`, and the MCP design is in
+`docs/rfc_mcp.html`.
+
+## License
+
+This project uses the MIT License. See `LICENSE`.
