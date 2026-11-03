@@ -17,6 +17,30 @@ its layers.
 
 A straight roller rolls cleanly only on a straight wall. The print check warns when the band tapers.
 
+## Use with Claude
+
+Claude can look at your roller, change it, and look again while you watch. It connects through a Model Context Protocol
+(MCP) server on the app's Cloudflare Worker. It only works while your tab is open.
+
+1. Open the app at https://aasimsani.net/projects/pottery-roller-maker/.
+2. Select **Connect Claude** in the header.
+3. Complete the person check.
+4. Copy the `claude mcp add` command from the panel.
+5. Run the command in a terminal.
+6. Start a new Claude Code session.
+7. Run the `/mcp__pottery-roller__design_roller` prompt.
+
+The session lasts one week. Claude can only change the design while your tab stays open. To end the session, select
+**Disconnect**.
+
+To run the app on your computer:
+
+1. Run `npm run dev:worker`.
+2. In a second terminal, run `npm run dev`.
+3. Open http://localhost:5181.
+
+The local Worker uses the Turnstile test key from `.dev.vars.example`. As a result, the person check always passes.
+
 ## Run it
 
 ```
