@@ -14,7 +14,8 @@ export type Op =
   | { op: 'removeLayer'; id: string }
   | { op: 'moveLayer'; id: string; to: number }
   | { op: 'fix'; key: string; value: string }
-  | { op: 'spotFix'; fix: Record<string, unknown> };
+  | { op: 'spotFix'; fix: Record<string, unknown> }
+  | { op: 'removeSpotFix'; index: number };
 
 export class OpError extends Error {}
 
@@ -108,6 +109,12 @@ export function applyOps(state: DesignState, ops: Op[], ctx: { checks: Check[] }
         if (!(u >= 0 && u <= 1) || !(v >= 0 && v <= 1)) throw new OpError('A spot fix needs u and v between 0 and 1, as shares across and down the pattern.');
         if (!(by >= 0 && by <= 10)) throw new OpError('A spot fix\'s by must be between 0 and 10 mm.');
         settings = { ...settings, spotFixes: [...settings.spotFixes, { kind, u, v, action, by } as Settings['spotFixes'][number]] };
+        break;
+      }
+      case 'removeSpotFix': {
+        const i = Math.round(Number(o.index));
+        if (!(i >= 0 && i < settings.spotFixes.length)) throw new OpError(`No spot fix has the index ${o.index}. There are ${settings.spotFixes.length}, numbered from 0.`);
+        settings = { ...settings, spotFixes: settings.spotFixes.filter((_, k) => k !== i) };
         break;
       }
       default: throw new OpError(`Unknown change: ${(o as { op: string }).op}.`);

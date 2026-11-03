@@ -47,6 +47,35 @@ export function spotAt(mask: Uint8Array, w: number, h: number, x: number, y: num
   return out;
 }
 
+export interface SpotInfo { x: number; y: number; area: number; minX: number; maxX: number; minY: number; maxY: number }
+
+// listSpots() lists every spot in a thin mask, largest first. Each one's (x, y) is the spot's pixel nearest its centre,
+// so the point always lies on the spot. A centre alone can fall off a curved line, such as the middle of a ring.
+export function listSpots(mask: Uint8Array, w: number, h: number): SpotInfo[] {
+  const seen = new Uint8Array(w * h), out: SpotInfo[] = [];
+  for (let k0 = 0; k0 < w * h; k0++) {
+    if (!mask[k0] || seen[k0]) continue;
+    const px: number[] = [], stack = [k0];
+    seen[k0] = 1;
+    while (stack.length) {
+      const p = stack.pop()!, x = p % w;
+      px.push(p);
+      for (const q of [x > 0 ? p - 1 : -1, x < w - 1 ? p + 1 : -1, p - w, p + w])
+        if (q >= 0 && q < w * h && mask[q] && !seen[q]) { seen[q] = 1; stack.push(q); }
+    }
+    let sx = 0, sy = 0, minX = w, maxX = 0, minY = h, maxY = 0;
+    for (const p of px) {
+      const x = p % w, y = Math.floor(p / w);
+      sx += x; sy += y; minX = Math.min(minX, x); maxX = Math.max(maxX, x); minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+    }
+    const cx = sx / px.length, cy = sy / px.length;
+    let best = px[0], bestD = Infinity;
+    for (const p of px) { const d = (p % w - cx) ** 2 + (Math.floor(p / w) - cy) ** 2; if (d < bestD) { bestD = d; best = p; } }
+    out.push({ x: best % w, y: Math.floor(best / w), area: px.length, minX, maxX, minY, maxY });
+  }
+  return out.sort((a, b) => b.area - a.area);
+}
+
 // dropSpots() takes the spots the user chose to leave out of a thin mask, so the print check stops counting them.
 export function dropSpots(mask: Uint8Array, w: number, h: number, points: { x: number; y: number }[]): { mask: Uint8Array; spots: number } {
   const out = mask.slice();

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dropSpots, fixRelief, thinOnRoller } from './fix';
+import { dropSpots, fixRelief, listSpots, thinOnRoller } from './fix';
 
 // bits() draws a w × h pattern from rows of '#' (raised) and '.' (base).
 const bits = (rows: string[]) => ({ w: rows[0].length, h: rows.length, data: Uint8Array.from(rows.join('').split(''), (c) => (c === '#' ? 1 : 0)) });
@@ -78,5 +78,19 @@ describe('spot fixes', () => {
     const p = two(), t = thinOnRoller(p.data, p.w, p.h, 3, 0);
     expect(t.spots).toBe(2);
     expect(dropSpots(t.mask, p.w, p.h, [{ x: 5, y: 15 }]).spots).toBe(1);
+  });
+});
+
+describe('listSpots', () => {
+  it('lists each spot with a point that lies on the spot, even for a curved one', () => {
+    // A ring, whose centre is empty, and a straight line.
+    const rows = Array.from({ length: 40 }, (_, y) => Array.from({ length: 60 }, (_, x) => {
+      const r = Math.hypot(x - 15, y - 20);
+      return (r > 9 && r < 11) || x === 45 ? '#' : '.';
+    }).join(''));
+    const p = bits(rows), t = thinOnRoller(p.data, p.w, p.h, 3, 0), spots = listSpots(t.mask, p.w, p.h);
+    expect(spots).toHaveLength(2);
+    for (const s of spots) expect(t.mask[s.y * p.w + s.x]).toBe(1);
+    expect(spots[0].area).toBeGreaterThanOrEqual(spots[1].area);
   });
 });

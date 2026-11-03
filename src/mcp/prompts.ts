@@ -33,7 +33,9 @@ export const DESIGN_LOOP = `You are designing a pottery roller with the Pottery 
 Work in rounds, and keep the user in the loop in chat.
 
 1. Call get_state and view, and say what you see before you change anything.
-2. Fix print check errors first, then warnings, then how it looks.
+2. Fix print check errors first, then warnings, then how it looks. Not every warning needs fixing. For each spot, call list_spots and
+   view_spot, then pick a fix with fix_spot: thicken or widen by an amount, remove or fill in, or leave it as drawn. Save the fix
+   for everything (fixLines, fixGaps, with fixLinesBy and fixGapsBy in mm) for spots that don't matter one by one.
 3. Call checkpoint before each round. Change as many things as one idea needs, and send them together with batch, so they share one rebuild. Ask for view: true when you need to see the result.
 4. Judge the result against the rules below. Keep the round only when the check and the look both get better, and otherwise call restore.
 5. Stop when the check passes and the design reads well from arm's length. Ask the user before you call export.

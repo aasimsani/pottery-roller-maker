@@ -9,6 +9,7 @@ import { searchIconify } from '../sources/iconify';
 import { capture3d } from '../ui/scene';
 import { plate3mf } from '../core/plate';
 import { setViewMode } from './viewMode';
+import { listSpots } from '../core/fix';
 import type { RollerBrief } from './prompts';
 import type { Handler } from './bridge';
 
@@ -150,6 +151,37 @@ export function makeHandlers(api: TabApi): Record<string, Handler> {
       else blob = await new Promise<Blob>((ok, fail) => flatCanvas()?.toBlob((b) => (b ? ok(b) : fail(new Error('No flat preview.')))) ?? fail(new Error('No flat preview.')));
       api.download(blob, `${name}.${format}`);
       return { file: `${name}.${format}`, bytes: blob.size, savedTo: 'the browser\'s downloads folder' };
+    },
+    // listSpots lists the spots the print check flags, largest first, with a point on each that fix_spot and view_spot take.
+    listSpots: async ({ kind = 'all', limit = 50 }: { kind?: 'line' | 'gap' | 'all'; limit?: number }) => {
+      const { result } = api.get();
+      if (!result) throw new Error('The roller hasn\'t finished building yet.');
+      const { w, h, res } = result.mask;
+      const spots = [...(kind !== 'gap' ? listSpots(result.thinRelief, w, h).map((p) => ({ kind: 'line' as const, ...p })) : []),
+        ...(kind !== 'line' ? listSpots(result.thinGaps, w, h).map((p) => ({ kind: 'gap' as const, ...p })) : [])]
+        .sort((a, b) => b.area - a.area);
+      return {
+        total: spots.length,
+        spots: spots.slice(0, limit).map((p) => ({
+          kind: p.kind, u: +((p.x + 0.5) / w).toFixed(4), v: +((p.y + 0.5) / h).toFixed(4),
+          sizeMm: [+((p.maxX - p.minX + 1) * res).toFixed(1), +((p.maxY - p.minY + 1) * res).toFixed(1)], areaMm2: +(p.area * res * res).toFixed(2),
+        })),
+      };
+    },
+    // viewSpot crops the flat view round one point and scales it up with hard pixel edges, so a thin spot is easy to see.
+    viewSpot: async ({ u, v, zoom = 4 }: { u: number; v: number; zoom?: number }) => {
+      const c = flatCanvas();
+      if (!c) throw new Error('No flat preview is on screen yet.');
+      const cw = Math.max(40, Math.round(c.width / Math.max(1, zoom))), ch = Math.max(30, Math.round(cw * 0.6));
+      const x0 = Math.min(c.width - cw, Math.max(0, Math.round(u * c.width - cw / 2))), y0 = Math.min(c.height - ch, Math.max(0, Math.round(v * c.height - ch / 2)));
+      const out = document.createElement('canvas'), k = 800 / cw;
+      out.width = 800; out.height = Math.round(ch * k);
+      const g = out.getContext('2d')!;
+      g.imageSmoothingEnabled = false;
+      g.drawImage(c, x0, y0, cw, ch, 0, 0, out.width, out.height);
+      g.strokeStyle = '#ffffff'; g.lineWidth = 2;
+      g.beginPath(); g.arc((u * c.width - x0) * k, (v * c.height - y0) * k, 14, 0, 2 * Math.PI); g.stroke();
+      return { images: [{ name: `Spot at u ${u}, v ${v}, ${zoom}× (the white ring marks the point)`, dataUrl: out.toDataURL('image/png') }] };
     },
     brief: async (): Promise<RollerBrief> => {
       const { s, result } = api.get();

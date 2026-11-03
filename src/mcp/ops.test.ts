@@ -52,3 +52,11 @@ describe('spot fixes through the MCP', () => {
     expect(() => applyOps(start(), [{ op: 'spotFix', fix: { ...fix, u: 1.4 } }], ctx)).toThrow(/u/);
   });
 });
+
+describe('undoing one spot fix through the MCP', () => {
+  it('removes the fix at an index, and refuses an index that has no fix', () => {
+    const one = applyOps(start(), [{ op: 'spotFix', fix: { kind: 'line', u: 0.1, v: 0.1, action: 'leave', by: 0 } }, { op: 'spotFix', fix: { kind: 'gap', u: 0.2, v: 0.2, action: 'fill', by: 0 } }], ctx);
+    expect(applyOps(one, [{ op: 'removeSpotFix', index: 0 }], ctx).settings.spotFixes.map((f) => f.kind)).toEqual(['gap']);
+    expect(() => applyOps(one, [{ op: 'removeSpotFix', index: 5 }], ctx)).toThrow(/index/);
+  });
+});
