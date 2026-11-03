@@ -9,7 +9,8 @@ import { searchIconify } from '../sources/iconify';
 import { capture3d } from '../ui/scene';
 import { plate3mf } from '../core/plate';
 import { setViewMode } from './viewMode';
-import { listSpots } from '../core/fix';
+import { listSpots, thinOnRoller } from '../core/fix';
+import { coverageGrid, printsMask, renderSight, type Region } from './sight';
 import type { RollerBrief } from './prompts';
 import type { Handler } from './bridge';
 
@@ -22,6 +23,9 @@ export interface TabApi {
   download(blob: Blob, name: string): void;
   baseName(): string;
 }
+
+type Show = 'drawn' | 'prints';
+interface ViewArgs { which?: 'flat' | '3d' | 'both'; mode?: PieceMode; grid?: boolean; spots?: boolean; show?: Show; tiles?: boolean }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -65,9 +69,44 @@ export function makeHandlers(api: TabApi): Record<string, Handler> {
   };
 
   const flatImage = () => { const c = flatCanvas(); return c ? shrink(c) : undefined; };
-  const view = async ({ which = 'both', mode }: { which?: 'flat' | '3d' | 'both'; mode?: PieceMode }) => {
+
+  const built = () => {
+    const { s, result } = api.get();
+    if (!result) throw new Error('The roller hasn\'t finished building yet.');
+    return { s, r: result };
+  };
+  // spotsOf() lists the flagged spots in one order, largest first, so the numbers on every picture match list_spots.
+  const spotsOf = (r: RollerResult, kind: 'line' | 'gap' | 'all' = 'all') => {
+    const { w, h } = r.mask;
+    return [...(kind !== 'gap' ? listSpots(r.thinRelief, w, h).map((p) => ({ kind: 'line' as const, ...p })) : []),
+      ...(kind !== 'line' ? listSpots(r.thinGaps, w, h).map((p) => ({ kind: 'gap' as const, ...p })) : [])]
+      .sort((a, b) => b.area - a.area).map((p, i) => ({ n: i + 1, ...p }));
+  };
+  // reliefOf() is the relief as it shows on screen, or, with "prints", as it reaches the pot. A thin line that doesn't
+  // print drops out and a narrow gap fills in, even where a spot fix said to leave it, because leaving it doesn't make it print.
+  const reliefOf = (s: Settings, r: RollerResult, show: Show) => {
+    const { w, h, inside, solid } = r.mask, relief = solid.map((v, k) => (inside[k] && !v ? 1 : 0));
+    if (show === 'drawn') return relief;
+    return printsMask(relief, thinOnRoller(relief, w, h, s.minPlastic / s.res, 0).mask, thinOnRoller(relief.map((v) => 1 - v), w, h, s.minHole / s.res, 1).mask);
+  };
+  const sight = (region: Region, o: { show?: Show; grid?: boolean; spots?: boolean; maxPx: number }) => {
+    const { s, r } = built(), show = o.show ?? 'drawn';
+    return renderSight(r.mask, reliefOf(s, r, show), region, {
+      maxPx: o.maxPx, grid: o.grid ?? true, spots: o.spots === false ? [] : spotsOf(r),
+      problems: show === 'drawn' ? { lines: r.thinRelief, gaps: r.thinGaps } : undefined,
+    }).toDataURL('image/png');
+  };
+  const SHOWN = { drawn: 'raised relief in the accent colour, thin lines red, narrow gaps purple', prints: 'what reaches the pot: thin lines dropped, narrow gaps filled' };
+
+  const view = async ({ which = 'both', mode, grid, spots, show = 'drawn', tiles }: ViewArgs) => {
     const images: { name: string; dataUrl: string }[] = [];
-    if (which !== '3d') { const f = flatImage(); if (f) images.push({ name: 'Roller, unrolled (raised relief in the accent colour)', dataUrl: f }); }
+    if (which !== '3d' && api.get().result) {
+      const name = `Roller, unrolled (${SHOWN[show]})${grid === false ? '' : ', grid in shares u across and v down'}`;
+      images.push({ name, dataUrl: sight({ u0: 0, v0: 0, u1: 1, v1: 1 }, { show, grid, spots, maxPx: 1200 }) });
+      // Tiles split the pattern into four across at full detail, for when the whole view is too small to judge.
+      if (tiles) for (let i = 0; i < 4; i++)
+        images.push({ name: `Tile ${i + 1} of 4, u ${i / 4} to ${(i + 1) / 4}`, dataUrl: sight({ u0: i / 4, v0: 0, u1: (i + 1) / 4, v1: 1 }, { show, grid, spots, maxPx: 1200 }) });
+    }
     if (which !== 'flat') {
       if (mode) { setViewMode(mode); await sleep(400); }
       let shot: HTMLCanvasElement | null = null;
@@ -105,7 +144,7 @@ export function makeHandlers(api: TabApi): Record<string, Handler> {
       const { s, layers } = api.get();
       return { settings: s, layers: layers.map(trimLayer), summary: summary(), checkpoints: [...checkpoints.keys()] };
     },
-    view: async (p: { which?: 'flat' | '3d' | 'both'; mode?: PieceMode }) => view(p),
+    view: async (p: ViewArgs) => view(p),
     apply: async ({ ops, view: wantView }: { ops: Record<string, unknown>[]; view?: boolean }) => {
       const { s, layers, result } = api.get();
       return commitAndWait(applyOps({ settings: s, layers }, ops.map(resolve), { checks: result?.checks ?? [] }), wantView);
@@ -154,18 +193,29 @@ export function makeHandlers(api: TabApi): Record<string, Handler> {
     },
     // listSpots lists the spots the print check flags, largest first, with a point on each that fix_spot and view_spot take.
     listSpots: async ({ kind = 'all', limit = 50 }: { kind?: 'line' | 'gap' | 'all'; limit?: number }) => {
-      const { result } = api.get();
-      if (!result) throw new Error('The roller hasn\'t finished building yet.');
-      const { w, h, res } = result.mask;
-      const spots = [...(kind !== 'gap' ? listSpots(result.thinRelief, w, h).map((p) => ({ kind: 'line' as const, ...p })) : []),
-        ...(kind !== 'line' ? listSpots(result.thinGaps, w, h).map((p) => ({ kind: 'gap' as const, ...p })) : [])]
-        .sort((a, b) => b.area - a.area);
+      const { r } = built(), { w, h, res } = r.mask, all = spotsOf(r), spots = kind === 'all' ? all : all.filter((p) => p.kind === kind);
       return {
         total: spots.length,
         spots: spots.slice(0, limit).map((p) => ({
-          kind: p.kind, u: +((p.x + 0.5) / w).toFixed(4), v: +((p.y + 0.5) / h).toFixed(4),
+          n: p.n, kind: p.kind, u: +((p.x + 0.5) / w).toFixed(4), v: +((p.y + 0.5) / h).toFixed(4),
           sizeMm: [+((p.maxX - p.minX + 1) * res).toFixed(1), +((p.maxY - p.minY + 1) * res).toFixed(1)], areaMm2: +(p.area * res * res).toFixed(2),
         })),
+      };
+    },
+    // viewRegion draws any box of the pattern, in shares, at full detail with its own finer grid.
+    viewRegion: async ({ u0, v0, u1, v1, show = 'drawn', grid, spots }: Region & { show?: Show; grid?: boolean; spots?: boolean }) => {
+      if (!(u1 > u0 && v1 > v0)) throw new Error('A region needs u1 > u0 and v1 > v0.');
+      return { images: [{ name: `Region u ${u0} to ${u1}, v ${v0} to ${v1} (${SHOWN[show]})`, dataUrl: sight({ u0, v0, u1, v1 }, { show, grid, spots, maxPx: 1000 }) }] };
+    },
+    // describeCoverage is the cheap look: text only, a few numbers per cell, no picture.
+    describeCoverage: async ({ cols = 4, rows = 2, show = 'drawn' }: { cols?: number; rows?: number; show?: Show }) => {
+      const { s, r } = built(), { w, h } = r.mask, spots = spotsOf(r);
+      const g = coverageGrid(reliefOf(s, r, show), w, h, cols, rows, spots.map((p) => ({ u: (p.x + 0.5) / w, v: (p.y + 0.5) / h })));
+      // Two small matrices read faster than a list of cells, and cost a fraction of the tokens.
+      return {
+        show, raisedPercent: g.raised, cellSize: { u: 1 / cols, v: 1 / rows },
+        raisedPercentByCell: g.cells, spotsByCell: g.spots,
+        spotsTotal: spots.length,
       };
     },
     // viewSpot crops the flat view round one point and scales it up with hard pixel edges, so a thin spot is easy to see.
