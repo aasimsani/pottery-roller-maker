@@ -2,7 +2,8 @@
 // abuse checks testable in Node, and worker/index.ts wires the real Turnstile, limits and Session objects.
 
 export interface Deps {
-  verifyTurnstile(token: string, ip: string): Promise<boolean>;
+  /** Returns Turnstile's verdict, with its error codes when it refuses the token. */
+  verifyTurnstile(token: string, ip: string): Promise<{ success: boolean; codes?: string[] }>;
   /** Each limit returns true while the caller is still under it. */
   limitSession(ip: string): Promise<boolean>;
   createSession(): Promise<{ session: string; tabSecret: string; token: string }>;
@@ -20,7 +21,9 @@ export async function openSession(req: Request, d: Deps): Promise<Response> {
   const ip = req.headers.get('CF-Connecting-IP') ?? 'local';
   if (!(await d.limitSession(ip))) return json({ error: 'Too many sessions from this address. Wait a minute, then try again.' }, 429);
   const body = (await req.json().catch(() => ({}))) as { turnstile?: unknown };
-  if (!(await d.verifyTurnstile(String(body.turnstile ?? ''), ip))) return json({ error: 'The person check failed. Reload the page and try again.' }, 403);
+  // The reply names Turnstile's error codes, because a wrong secret and an expired check look the same otherwise.
+  const check = await d.verifyTurnstile(String(body.turnstile ?? ''), ip);
+  if (!check.success) return json({ error: `The person check failed (${check.codes?.join(', ') || 'no reason given'}). Reload the page and try again.` }, 403);
   return json(await d.createSession());
 }
 
