@@ -32,7 +32,8 @@ export function App() {
   const [saved, setSettings] = usePersistent<Record<string, unknown> | null>('settings', null);
   const s = useMemo(() => settingsFrom(saved), [saved]); // fills in defaults and converts older saves
   const set = <K extends keyof Settings>(key: K, value: Settings[K]) => setSettings((prev) => ({ ...settingsFrom(prev), [key]: value }));
-  const [layers, setLayers] = usePersistent<Layer[]>('layers', initialLayers);
+  const [layers, setLayers, layersStored] = usePersistent<Layer[]>('layers', initialLayers);
+  const unsaved = layersStored ? '' : 'This design is too big for the browser to keep, so a reload will lose its layers. Download your files before you reload.';
   const refs = useMemo(() => layers.flatMap((l) => (l.ref ? [l.ref] : [])), [layers]);
   const [arts, setArts] = useState(new Map<string, Art>());
   const [artErrors, setArtErrors] = useState(new Map<string, string>());
@@ -178,7 +179,7 @@ export function App() {
       <div className="app">
         <Controls s={s} set={set} result={result} onPhoto={() => setPhotoOpen(true)} onScale={onScale} />
         <main>
-          <Preview s={s} result={result} error={error} loading={loading} updating={updating} onPaint={(c) => set('paintColor', c)} onFix={(k, v) => set(k, v as never)} onSet={set} onStl={onStl} onAll={onAll} onAddToPlate={onAddToPlate} onPng={onPng} />
+          <Preview s={s} result={result} error={error || unsaved} loading={loading} updating={updating} onPaint={(c) => set('paintColor', c)} onFix={(k, v) => set(k, v as never)} onSet={set} onStl={onStl} onAll={onAll} onAddToPlate={onAddToPlate} onPng={onPng} />
           <PlatePanel plate={plate} bedW={s.bedW} bedD={s.bedD} onRemove={(i) => setPlate((p) => p.filter((_, k) => k !== i))}
             onClear={() => setPlate([])} onDownload={(zip, name) => download(new Blob([zip as BlobPart], { type: 'model/3mf' }), name)} />
           <LayersPanel layers={layers} setLayers={setLayers} info={result?.layerInfo ?? new Map()} errors={artErrors} onAutoThreshold={autoThreshold} onAddDesign={() => setLibraryOpen(true)} />
