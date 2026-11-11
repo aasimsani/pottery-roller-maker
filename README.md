@@ -23,7 +23,10 @@ design library, and layers.
 8. **Download it.** **Download roller + handle (.3mf)** puts the roller, the handle and the axle on one plate.
    **Download STL** saves the roller alone.
 
-A straight roller rolls cleanly only on a straight wall. The print check warns you when the band tapers.
+A straight roller rolls cleanly only on a straight wall. The print check warns you when the band tapers or bows, and
+it offers **Shape the roller to the pot**. A shaped roller's side follows the pot's wall, so it touches along the whole
+band. You can also set **Shape** to **shaped to the pot** under **Roller**. Hold the end that printed on the bed toward
+the pot's base. On a strongly curved band, the print check warns you when the pattern would drag at the band's edges.
 
 ## Use with Claude
 

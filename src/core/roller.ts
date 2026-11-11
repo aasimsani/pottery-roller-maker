@@ -10,7 +10,27 @@ export interface RollerSpec {
   bore: number;      // Axle hole diameter, in mm. 0 makes a solid drum.
   cell: number;      // Mesh spacing on the surface, in mm.
   mirror: boolean;   // The clay shows the mirror image of the roller, so mirror makes the impression read the right way round.
+  /**
+   * The roller's side when it is shaped to a pot: the height along the axis (t) and the tip radius (r), in mm, at even
+   * steps along the surface from end to end. length then measures the surface, which is a little longer than the axis.
+   * A straight roller leaves it out.
+   */
+  outline?: { t: number[]; r: number[] };
 }
+
+// sideAt() gives the tip radius and the height along the axis at z mm along the roller's surface. A straight roller's
+// surface runs parallel to its axis, so its height is z itself.
+function sideAt(s: RollerSpec, z: number): [number, number] {
+  const o = s.outline;
+  if (!o) return [s.diameter / 2, z];
+  const n = o.r.length - 1, x = Math.min(n, Math.max(0, (z / s.length) * n)), i = Math.min(n - 1, Math.floor(x)), f = x - i;
+  return [o.r[i] + (o.r[i + 1] - o.r[i]) * f, o.t[i] + (o.t[i + 1] - o.t[i]) * f];
+}
+
+/** The roller's length along its axis, in mm. */
+export const axialLength = (s: RollerSpec) => (s.outline ? s.outline.t[s.outline.t.length - 1] : s.length);
+/** The tip radius at the roller's thinnest point, in mm. */
+const thinnest = (s: RollerSpec) => (s.outline ? Math.min(...s.outline.r) : s.diameter / 2);
 
 export interface Mesh { positions: Float32Array; indices: Uint32Array }
 
@@ -68,27 +88,27 @@ export function heightmapFromBits(bits: Uint8Array, w: number, h: number, soften
 // rollerMesh() builds a closed drum along +z: a displaced outer wall, flat end caps, and an axle bore.
 // Columns wrap, so the seam shares vertices and the mesh stays watertight.
 export function rollerMesh(m: Heightmap, s: RollerSpec): Mesh {
-  const Rb = s.diameter / 2 - s.depth, rb = s.bore / 2;
+  const rb = s.bore / 2, tall = axialLength(s);
   const nt = Math.max(16, Math.round((Math.PI * s.diameter) / s.cell));
   const nz = Math.max(2, Math.round(s.length / s.cell) + 1);
   const inner = rb > 0 ? 2 * nt : 2;
   const pos = new Float32Array((nz * nt + inner) * 3);
   const ang = (i: number) => (i / nt) * 2 * Math.PI;
   for (let j = 0; j < nz; j++) {
-    const z = (s.length * j) / (nz - 1);
+    const z = (s.length * j) / (nz - 1), [tip, t] = sideAt(s, z);
     for (let i = 0; i < nt; i++) {
-      const a = ang(i), r = Rb + s.depth * heightAt(m, s, a, z), k = (j * nt + i) * 3;
-      pos[k] = r * Math.cos(a); pos[k + 1] = r * Math.sin(a); pos[k + 2] = z;
+      const a = ang(i), r = tip - s.depth + s.depth * heightAt(m, s, a, z), k = (j * nt + i) * 3;
+      pos[k] = r * Math.cos(a); pos[k + 1] = r * Math.sin(a); pos[k + 2] = t;
     }
   }
   const base = nz * nt;
   if (rb > 0) {
     for (let e = 0; e < 2; e++) for (let i = 0; i < nt; i++) {
       const k = (base + e * nt + i) * 3, a = ang(i);
-      pos[k] = rb * Math.cos(a); pos[k + 1] = rb * Math.sin(a); pos[k + 2] = e * s.length;
+      pos[k] = rb * Math.cos(a); pos[k + 1] = rb * Math.sin(a); pos[k + 2] = e * tall;
     }
   } else {
-    pos.set([0, 0, 0, 0, 0, s.length], base * 3);
+    pos.set([0, 0, 0, 0, 0, tall], base * 3);
   }
 
   const idx: number[] = [];
@@ -195,13 +215,14 @@ function roof(Ri: number, hubR: number, rb: number, length: number, b: DrumBuild
 // drumParts() returns closed parts that may overlap. ponytail: the slicer unions overlapping shells,
 // so the spokes and the roof simply reach 0.5 mm into the tube and the hub. Merge them with a mesh union if a slicer ever objects.
 export function drumParts(m: Heightmap, s: RollerSpec, b: DrumBuild): Mesh[] {
-  const Ri = s.diameter / 2 - s.depth - b.wall, hubR = s.bore / 2 + b.hub;
+  // The inside is a plain cylinder, sized to the thinnest part of a shaped roller, so the wall is never under b.wall.
+  const Ri = thinnest(s) - s.depth - b.wall, hubR = s.bore / 2 + b.hub;
   // A drum with no axle hole still gets a 1 mm hole up the middle, because the cone can't close on the axis itself.
   const rb = Math.max(s.bore / 2, 1), segments = Math.max(32, Math.round((2 * Math.PI * Ri) / Math.max(s.cell, 1)));
-  const top = b.kind === 'solid' || Ri - hubR < 1 || b.spokes < 1 ? null : roof(Ri, hubR, rb, s.length, b, segments);
+  const top = b.kind === 'solid' || Ri - hubR < 1 || b.spokes < 1 ? null : roof(Ri, hubR, rb, axialLength(s), b, segments);
   if (!top) return [rollerMesh(m, s)];
   const plate = b.plate, parts = [rollerMesh(m, { ...s, bore: 2 * Ri }), top];
-  parts.push(rollerMesh(FLAT, { ...s, length: plate, diameter: 2 * hubR, depth: 0, rim: 0, cell: Math.max(s.cell, 1) }));
+  parts.push(rollerMesh(FLAT, { ...s, outline: undefined, length: plate, diameter: 2 * hubR, depth: 0, rim: 0, cell: Math.max(s.cell, 1) }));
   for (let k = 0; k < b.spokes; k++) parts.push(spoke(hubR - 0.5, Ri + 0.5, b.spokeW, (k / b.spokes) * 2 * Math.PI, 0, plate));
   return parts;
 }

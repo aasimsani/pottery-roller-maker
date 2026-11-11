@@ -130,3 +130,35 @@ describe('hollow drum printability', () => {
     expect(drumParts(flat(0), s, hollow()).reduce((v, p) => v + volume(p), 0)).toBeLessThan(volume(rollerMesh(flat(0), s)) * 0.5);
   });
 });
+
+describe('a roller shaped to the pot', () => {
+  // waist is thinner in the middle than at its ends, as a roller for a bellied pot is. Its samples sit at even steps
+  // along the surface, so the 50 mm of surface covers 49.6 mm of axis.
+  const waist = { t: [0, 12.4, 24.8, 37.2, 49.6], r: [22, 20, 19, 20, 22] };
+  // at() lists the distance from the axis of every vertex at one height.
+  const at = (m: Mesh, z: number) => {
+    const out: number[] = [];
+    for (let k = 0; k < m.positions.length; k += 3) if (Math.abs(m.positions[k + 2] - z) < 1e-4) out.push(Math.hypot(m.positions[k], m.positions[k + 1]));
+    return out;
+  };
+  const top = (m: Mesh) => Math.max(...m.positions.filter((_, k) => k % 3 === 2));
+
+  it('puts the relief\'s tips on the outline, and its base one relief depth below', () => {
+    const tips = rollerMesh(flat(1), spec({ outline: waist })), base = rollerMesh(flat(0), spec({ outline: waist }));
+    expect(Math.max(...at(tips, 0))).toBeCloseTo(22);
+    for (const r of at(tips, 24.8)) expect(r).toBeCloseTo(19);
+    for (const r of at(base, 24.8)) expect(r).toBeCloseTo(19 - 1.5);
+  });
+  it('stays closed, and is as tall as the outline\'s axis rather than its surface', () => {
+    const m = rollerMesh(ramp(), spec({ outline: waist }));
+    expect(closed(m)).toBe(true);
+    expect(volume(m)).toBeGreaterThan(0);
+    expect(top(m)).toBeCloseTo(49.6);
+  });
+  it('builds a hollow drum inside the thinnest part, with nothing starting in mid-air', () => {
+    const s = spec({ outline: waist, cell: 0.5 }), parts = drumParts(flat(0), s, hollow());
+    expect(parts.length).toBeGreaterThan(1);
+    for (const p of parts) { expect(closed(p)).toBe(true); expect(overhangs(p)).toBe(0); expect(top(p)).toBeLessThanOrEqual(49.6 + 1e-6); }
+    expect(Math.min(...at(parts[0], 0))).toBeCloseTo(19 - 1.5 - 3);
+  });
+});

@@ -51,7 +51,7 @@ export function buildServer(callTab: CallTab, mintUploadUrl: () => Promise<strin
     (a) => callTab('viewRegion', a));
   tool('describe_coverage', 'Describe the pattern in text, with no image. It splits the pattern into cols × rows cells, and gives each cell its share raised and its count of flagged spots. Keep the grid small, because a few cells say enough to find where to look.',
     z.object({ cols: z.number().int().min(1).max(12).default(4), rows: z.number().int().min(1).max(6).default(2), show }), (a) => callTab('describeCoverage', a));
-  tool('update_settings', 'Merge a patch into the settings, such as {"depth": 2} or {"build": {"kind": "solid"}}. Unknown keys and wrong types are rejected.',
+  tool('update_settings', 'Merge a patch into the settings, such as {"depth": 2}, {"build": {"kind": "solid"}}, or {"shape": "pot"} to shape the side of the roller to a curved or tapered pot. Unknown keys and wrong types are rejected.',
     z.object({ patch, view }), (a) => apply([{ op: 'settings', patch: a.patch }], a.view));
   tool('add_lines', 'Add a lines layer on top.', z.object({ view }), (a) => apply([{ op: 'addLayer', kind: 'lines' }], a.view));
   tool('search_library', 'Search a design library. Pass a result\'s source and id to add_design.',
@@ -68,7 +68,7 @@ export function buildServer(callTab: CallTab, mintUploadUrl: () => Promise<strin
   tool('move_layer', 'Move a layer to a new index. Index 0 is the bottom layer.',
     z.object({ id: z.string(), to: z.number().int(), view }), (a) => apply([{ op: 'moveLayer', id: a.id, to: a.to }], a.view));
   tool('apply_fix', 'Press one of the fix buttons the print check offers, as listed by get_state.',
-    z.object({ key: z.enum(['fixLines', 'fixGaps']), value: z.string(), view }), (a) => apply([{ op: 'fix', key: a.key, value: a.value }], a.view));
+    z.object({ key: z.enum(['fixLines', 'fixGaps', 'shape']), value: z.string(), view }), (a) => apply([{ op: 'fix', key: a.key, value: a.value }], a.view));
   tool('fix_spot', 'Fix one spot the print check flags, chosen by its position as shares across (u) and down (v) the flat pattern. A "line" is a thin raised line: thicken it by "by" mm, remove it, or leave it. A "gap" is a narrow gap: widen it by "by" mm, fill it in, or leave it. "leave" keeps the spot as drawn and stops it counting as a warning.',
     z.object({ kind: z.enum(['line', 'gap']), u: z.number().min(0).max(1), v: z.number().min(0).max(1), action: z.enum(['thicken', 'remove', 'fill', 'widen', 'leave']), by: z.number().min(0).max(10).default(0), view }),
     (a) => apply([{ op: 'spotFix', fix: { kind: a.kind, u: a.u, v: a.v, action: a.action, by: a.by } }], a.view));

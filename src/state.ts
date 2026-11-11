@@ -16,6 +16,8 @@ export interface Settings {
   /** Roller turns per lap of the pot. The roller's diameter is the pot's divided by this, so the pattern meets itself. */
   laps: number;
   use: Use;
+  /** A straight roller is a plain cylinder. A roller shaped to the pot follows the wall across the band, so it touches a curved or tapered pot along its whole length. */
+  shape: 'straight' | 'pot';
   /** Relief height and edge softening, in mm. */
   depth: number; soften: number;
   /** Carries the pattern mirrored, so the clay shows it the right way round. */
@@ -49,7 +51,7 @@ export interface SpotFix { kind: 'line' | 'gap'; u: number; v: number; action: S
 export const DEFAULTS: Settings = {
   piece: { name: 'Straight mug', profile: [{ z: 0, d: 80 }, { z: 95, d: 80 }] },
   bandFrom: 15, bandTo: 80, ends: 4,
-  laps: 2, use: 'texture', depth: 1.2, soften: 0.3, mirror: true, bore: 8.2,
+  laps: 2, use: 'texture', shape: 'straight', depth: 1.2, soften: 0.3, mirror: true, bore: 8.2,
   build: { kind: 'hollow', wall: 2, spokes: 6, spokeW: 3, hub: 3, plate: 6, infill: 0.15 },
   handle: true, grip: 90,
   res: 0.15, cell: 0.4,

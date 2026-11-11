@@ -30,6 +30,19 @@ export function diameterAt(piece: Piece, s: number): number {
   return p[p.length - 1].d;
 }
 
+/** True for a plate or a shallow dish, which is decorated on top rather than round the outside. */
+export const isFlat = (piece: Piece) => piece.profile[piece.profile.length - 1].z - piece.profile[0].z < surfaceLength(piece) * 0.5;
+
+// wallAt() is the wall's radius and height at a distance along the surface from the base. Past either end of the
+// piece it carries on straight, in line with the nearest stretch of wall.
+export function wallAt(piece: Piece, s: number): { r: number; z: number } {
+  const ss = surfaceAt(piece), p = piece.profile;
+  let i = 1;
+  while (i < p.length - 1 && s > ss[i]) i++;
+  const f = (s - ss[i - 1]) / (ss[i] - ss[i - 1] || 1);
+  return { r: (p[i - 1].d + (p[i].d - p[i - 1].d) * f) / 2, z: p[i - 1].z + (p[i].z - p[i - 1].z) * f };
+}
+
 export interface BandOptions {
   /** The paint band's edges, in mm along the surface from the base. */
   from: number; to: number;
@@ -78,8 +91,7 @@ export interface Profile { points: ProfilePoint[]; flat: boolean }
 export function pieceProfile(piece: Piece, wall = 4): Profile {
   const ss = surfaceAt(piece), S = ss.at(-1) || 1, p = piece.profile;
   const surface = p.map((q, i) => ({ r: q.d / 2, z: q.z, v: TEX_PAD + (ss[i] / S) * (1 - 2 * TEX_PAD) }));
-  const height = p[p.length - 1].z - p[0].z, rim = surface[surface.length - 1], base = surface[0];
-  const flat = height < S * 0.5;
+  const rim = surface[surface.length - 1], base = surface[0], flat = isFlat(piece);
   if (flat) {
     return {
       flat,

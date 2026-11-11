@@ -27,7 +27,7 @@ interface Props {
   onPng: (canvas: HTMLCanvasElement) => void;
   onPaint: (color: string) => void;
   /** Turns on a repair the print check offers, or turns it off again with 'off'. */
-  onFix: (key: 'fixLines' | 'fixGaps', value: string) => void;
+  onFix: (key: 'fixLines' | 'fixGaps' | 'shape', value: string) => void;
   /** Sets any setting. The spot fixes and the fix amounts use it. */
   onSet: <K extends keyof Settings>(key: K, value: Settings[K]) => void;
 }
@@ -130,7 +130,7 @@ export function Preview({ s, result, error, loading, updating, onStl, onAll, onA
         {updating && <span className="updating">Updating…</span>}
         {r && (
           <>
-            <span>Roller <b>Ø{r.roller.diameter.toFixed(1)} × {r.roller.length.toFixed(1)} mm</b>, {Math.round(s.laps)} turn{Math.round(s.laps) > 1 ? 's' : ''} per lap</span>
+            <span>Roller <b>Ø{r.roller.outline ? `${r.roller.minD.toFixed(1)}–${r.roller.maxD.toFixed(1)}` : r.roller.diameter.toFixed(1)} × {r.roller.axial.toFixed(1)} mm</b>, {Math.round(s.laps)} turn{Math.round(s.laps) > 1 ? 's' : ''} per lap</span>
             <span>{fits ? 'fits the bed standing up' : 'too big for the bed'}</span>
             <span>{s.depth} mm relief, about {Math.round(r.grams)} g PETG</span>
             {r.handle && <span>Handle <b>{r.handle.size[0].toFixed(0)} × {r.handle.size[1].toFixed(0)} mm</b>, prints flat</span>}
@@ -160,6 +160,11 @@ export function Preview({ s, result, error, loading, updating, onStl, onAll, onA
                 </span>
               </li>
             ))}
+            {s.shape === 'pot' && (
+              <li className="note"><span aria-hidden="true">•</span>
+                <span>Shaped the roller to the pot's wall, so it touches along the whole band.{' '}
+                  <button className="secondary small" onClick={() => onFix('shape', 'straight')}>Undo</button></span></li>
+            )}
             {s.fixLines !== 'off' && (
               <li className="note"><span aria-hidden="true">•</span>
                 <span>{s.fixLines === 'thicken' ? 'Thickened' : 'Removed'} {r.fixed.lines} thin raised line{r.fixed.lines === 1 ? '' : 's'}
@@ -211,6 +216,7 @@ export function Preview({ s, result, error, loading, updating, onStl, onAll, onA
           <li><b>Fine lines:</b> a 0.2 mm nozzle keeps them crisp. With a 0.4 mm nozzle, keep raised lines and gaps at least 0.8 mm wide.</li>
           <li><b>PETG or PLA:</b> both work. PLA strings less and gives crisper relief, and PETG takes knocks in the studio better.</li>
           <li><b>Handle:</b> turn on <b>Print a handle</b> under Handle, then use <b>Download roller + handle</b>. The handle prints flat, and the axle prints standing on its head. Push the axle through one arm, the roller and the other arm. An 8 mm dowel works instead of the printed axle.</li>
+          <li><b>Curved or tapered pots:</b> set <b>Shape</b> to <b>shaped to the pot</b> under Roller. The roller's side then follows the wall, so it touches along the whole band. Hold the end that printed on the bed toward the pot's base.</li>
           <li><b>Texture:</b> roll soft, leather-firm clay. Dust the roller with cornstarch, or mist the clay, so it doesn't stick.</li>
           <li><b>Underglaze:</b> load the raised tops thinly with a sponge or brayer, then roll once onto leather-hard clay with light, even pressure.</li>
           <li><b>Round a pot:</b> start at a pencil mark and roll the set number of turns. The pattern meets itself at the mark. Pencil burns off in the kiln.</li>

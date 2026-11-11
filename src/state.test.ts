@@ -25,3 +25,7 @@ test('every key but the shared saved pieces lives under the app prefix, so the e
   expect(storageKey('layers')).toBe('roller.layers');
   expect(storageKey('pieces')).toBe('pieces');
 });
+
+test('settings saved before shaped rollers existed keep a straight roller', () => {
+  expect(settingsFrom({ laps: 3 }).shape).toBe('straight');
+});
