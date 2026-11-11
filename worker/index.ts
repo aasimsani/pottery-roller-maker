@@ -27,7 +27,8 @@ function deps(env: Env): Deps {
       const body = new FormData();
       body.set('secret', env.TURNSTILE_SECRET); body.set('response', token); body.set('remoteip', ip);
       const r = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', { method: 'POST', body });
-      return ((await r.json()) as { success?: boolean }).success === true;
+      const v = (await r.json()) as { success?: boolean; 'error-codes'?: string[] };
+      return { success: v.success === true, codes: v['error-codes'] };
     },
     limitSession: async (ip) => !env.SESSION_RATE || (await env.SESSION_RATE.limit({ key: ip })).success,
     async createSession() {

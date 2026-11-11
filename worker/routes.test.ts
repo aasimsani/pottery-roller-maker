@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { authorizeMcp, openSession, type Deps } from './routes';
 
 const deps = (o: Partial<Deps> = {}): Deps => ({
-  verifyTurnstile: async (t) => t === 'pass',
+  verifyTurnstile: async (t) => (t === 'pass' ? { success: true } : { success: false, codes: ['invalid-input-response'] }),
   limitSession: async () => true,
   createSession: async () => ({ session: 'S1', tabSecret: 'tab', token: 'S1.mcp' }),
   checkToken: async (t) => (t === 'S1.mcp' ? 'S1' : null),
@@ -16,9 +16,13 @@ describe('openSession', () => {
   it('refuses a session without a passing Turnstile token', async () => {
     expect((await openSession(post({ turnstile: 'fail' }), deps())).status).toBe(403);
   });
+  it("names Turnstile's reason when it refuses the token, so a bad secret shows up as one", async () => {
+    const r = await openSession(post({ turnstile: 'fail' }), deps());
+    expect(((await r.json()) as { error: string }).error).toContain('invalid-input-response');
+  });
   it('refuses a session past the per-IP limit, before it checks Turnstile', async () => {
     let checked = false;
-    const r = await openSession(post({ turnstile: 'pass' }), deps({ limitSession: async () => false, verifyTurnstile: async () => (checked = true) }));
+    const r = await openSession(post({ turnstile: 'pass' }), deps({ limitSession: async () => false, verifyTurnstile: async () => ({ success: (checked = true) }) }));
     expect([r.status, checked]).toEqual([429, false]);
   });
   it('opens a session and hands back the tab secret and the MCP token', async () => {
