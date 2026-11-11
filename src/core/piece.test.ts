@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { bandOnPiece, pieceProfile, surfaceLength, TEX_PAD, type Piece } from './piece';
+import { bandOnPiece, isFlat, pieceProfile, surfaceLength, TEX_PAD, wallAt, type Piece } from './piece';
 
 const mug: Piece = { name: 'mug', profile: [{ z: 0, d: 78 }, { z: 95, d: 86 }] };
 const plate: Piece = { name: 'plate', profile: [{ z: 0, d: 180 }, { z: 8, d: 260 }] };
@@ -59,5 +59,28 @@ describe('pieceProfile', () => {
 
   test('a plate is flat, with the painted rim on top', () => {
     expect(pieceProfile(plate).flat).toBe(true);
+  });
+});
+
+describe('wallAt', () => {
+  const flared = { name: 'Flared', profile: [{ z: 0, d: 80 }, { z: 40, d: 80 }, { z: 80, d: 140 }] };
+  test('gives the wall\'s radius and height at a distance along the surface', () => {
+    expect(wallAt(flared, 25)).toEqual({ r: 40, z: 25 });
+    const p = wallAt(flared, 40 + 25);
+    expect(p.r).toBeCloseTo(40 + 15);
+    expect(p.z).toBeCloseTo(40 + 20);
+  });
+  test('carries on straight past the base and the rim', () => {
+    expect(wallAt(flared, -10)).toEqual({ r: 40, z: -10 });
+    const p = wallAt(flared, 40 + 50 + 5);
+    expect(p.r).toBeCloseTo(70 + 3);
+    expect(p.z).toBeCloseTo(80 + 4);
+  });
+});
+
+describe('isFlat', () => {
+  test('tells a plate, which is decorated on top, from a pot', () => {
+    expect(isFlat({ name: 'Plate rim', profile: [{ z: 0, d: 180 }, { z: 8, d: 260 }] })).toBe(true);
+    expect(isFlat(vase)).toBe(false);
   });
 });

@@ -60,3 +60,14 @@ describe('undoing one spot fix through the MCP', () => {
     expect(() => applyOps(one, [{ op: 'removeSpotFix', index: 5 }], ctx)).toThrow(/index/);
   });
 });
+
+describe('roller shape', () => {
+  it('lets Claude shape the roller to the pot, and rejects a shape that doesn\'t exist', () => {
+    expect(applyOps(start(), [{ op: 'settings', patch: { shape: 'pot' } }], ctx).settings.shape).toBe('pot');
+    expect(() => applyOps(start(), [{ op: 'settings', patch: { shape: 'round' } }], ctx)).toThrow(/shape/);
+  });
+  it('applies the print check\'s offer to shape the roller', () => {
+    const offer: Check[] = [{ id: 'curve', level: 'warn', message: '', fixes: [{ label: 'Shape the roller to the pot', key: 'shape', value: 'pot' }] }];
+    expect(applyOps(start(), [{ op: 'fix', key: 'shape', value: 'pot' }], { checks: offer }).settings.shape).toBe('pot');
+  });
+});

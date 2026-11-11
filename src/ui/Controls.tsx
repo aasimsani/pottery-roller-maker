@@ -122,6 +122,10 @@ export function Controls({ s, set, result, onPhoto, onScale }: { s: Settings; se
           : 'The raised tops carry underglaze. Load them with a sponge or brayer, then roll onto leather-hard clay. Deep, crisp relief keeps paint off the low parts.'}</p>
         <NumberField label="Turns per lap of the pot" unit="×" value={s.laps} min={1} max={20} step={1} onChange={(v) => set('laps', Math.max(1, Math.round(v)))} />
         {r && <p className="hint">The roller is Ø{r.diameter.toFixed(1)} × {r.length.toFixed(1)} mm. It goes round a Ø{r.potD.toFixed(1)} mm pot in exactly {Math.round(s.laps)} turn{Math.round(s.laps) > 1 ? 's' : ''}, so the pattern meets itself where you finish.</p>}
+        <SelectField label="Shape" value={s.shape} onChange={(v) => set('shape', v)} options={[['straight', 'straight cylinder'], ['pot', 'shaped to the pot']]} />
+        <p className="hint">{s.shape === 'pot'
+          ? <>The roller's side follows the pot's wall across the band, so it touches along its whole length.{r?.outline ? ` It is Ø${r.minD.toFixed(1)} mm at its thinnest and Ø${r.maxD.toFixed(1)} mm at its widest.` : ''} Hold the end that printed on the bed toward the pot's base. The side follows the straight stretches between your measurements, so add a measurement wherever the wall bends.</>
+          : 'A straight roller suits a straight wall. On a curved or tapered wall, shape the roller to the pot, so it touches along its whole length.'}</p>
         <NumberField label="Relief depth" unit="mm" value={s.depth} min={0.2} max={6} step={0.1} onChange={(v) => set('depth', v)} />
         <NumberField label="Soften edges" unit="mm" value={s.soften} min={0} max={3} step={0.1} onChange={(v) => set('soften', v)} />
         <NumberField label="Plain ends" unit="mm" value={s.ends} min={0} max={40} step={0.5} onChange={(v) => set('ends', v)} />

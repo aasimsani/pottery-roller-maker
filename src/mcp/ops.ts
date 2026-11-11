@@ -21,7 +21,7 @@ export class OpError extends Error {}
 
 // Fields whose strings must be one of a few values. The type check alone would let a typo through.
 const ENUMS: Record<string, string[]> = {
-  use: ['texture', 'underglaze'], fixLines: ['off', 'thicken', 'remove'], fixGaps: ['off', 'fill', 'widen'],
+  use: ['texture', 'underglaze'], shape: ['straight', 'pot'], fixLines: ['off', 'thicken', 'remove'], fixGaps: ['off', 'fill', 'widen'],
   'build.kind': ['hollow', 'solid'], blend: ['paint', 'cut'], arrange: ['grid', 'scatter'],
   'lines.style': ['solid', 'dashed', 'dotted', 'wavy'],
 };
