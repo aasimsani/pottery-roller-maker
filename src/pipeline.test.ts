@@ -1,5 +1,5 @@
 import { describe, expect, it, test } from 'vitest';
-import { computeRoller } from './pipeline';
+import { computeRoller, tightenPx } from './pipeline';
 import { DEFAULTS, type Settings } from './state';
 import { newLinesLayer } from './layers';
 
@@ -116,5 +116,15 @@ describe('a roller shaped to the pot', () => {
     expect(ids(r)).not.toContain('handle-bed');
     // The fork spans the roller's axis plus a clearance at each end, and two arms 6 mm wider than the 8.2 mm axle hole.
     expect(r.handle!.size[0]).toBeCloseTo(r.roller.axial + 2 * 0.6 + 2 * 14.2, 1);
+  });
+});
+
+describe('tightenPx', () => {
+  it('asks for wider lines on a shaped roller only when its thin part narrows them by half a pixel or more', () => {
+    // A flared mug's roller is 5% thinner at one end, which narrows a 4-pixel line by a fifth of a pixel.
+    expect(tightenPx(4, 1.05)).toBe(4);
+    // A strongly bellied vase's roller is 18% thinner at its waist.
+    expect(tightenPx(4, 1.18)).toBe(5);
+    expect(tightenPx(5.33, 1)).toBeCloseTo(5.33);
   });
 });

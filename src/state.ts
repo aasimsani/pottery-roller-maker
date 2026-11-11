@@ -90,7 +90,8 @@ const LEGACY: Record<string, (v: unknown) => unknown> = {};
 // usePersistent() is useState backed by localStorage. Storage can be missing or full
 // (private windows, large uploaded images), so failures fall back to in-memory state.
 // The first load reads what an older version saved under the bare key, through LEGACY, and saves it under the prefix.
-export function usePersistent<T>(key: string, initial: T | (() => T)): [T, (v: T | ((prev: T) => T)) => void] {
+// The third value says whether the last save worked, so the app can warn before a reload loses the work.
+export function usePersistent<T>(key: string, initial: T | (() => T)): [T, (v: T | ((prev: T) => T)) => void, boolean] {
   const full = storageKey(key);
   const [value, setValue] = useState<T>(() => {
     try {
@@ -101,8 +102,9 @@ export function usePersistent<T>(key: string, initial: T | (() => T)): [T, (v: T
     } catch { /* fall through to the initial value */ }
     return typeof initial === 'function' ? (initial as () => T)() : initial;
   });
+  const [stored, setStored] = useState(true);
   useEffect(() => {
-    try { localStorage.setItem(full, JSON.stringify(value)); } catch { /* storage full or blocked */ }
+    try { localStorage.setItem(full, JSON.stringify(value)); setStored(true); } catch { setStored(false); }
   }, [full, value]);
-  return [value, setValue];
+  return [value, setValue, stored];
 }

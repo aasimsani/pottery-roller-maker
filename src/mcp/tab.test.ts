@@ -27,3 +27,11 @@ it("waits for the build that includes the new design's art before it replies", a
   const reply = (await h.apply({ ops: [{ op: 'settings', patch: { depth: 2 } }] } as never)) as { grams: number };
   expect(reply.grams).toBe(3);
 });
+
+it("leaves a shaped roller's outline out of replies, because it is hundreds of numbers Claude never reads", async () => {
+  const api = fakeApp(), get = api.get;
+  api.get = () => { const g = get(); return { ...g, result: { ...g.result!, roller: { ...g.result!.roller, minD: 38, maxD: 42, outline: { t: [0, 1], r: [19, 21] } } } as never }; };
+  const state = (await makeHandlers(api).getState({} as never)) as { summary: { roller: Record<string, unknown> } };
+  expect(state.summary.roller.minD).toBe(38);
+  expect(state.summary.roller).not.toHaveProperty('outline');
+});
