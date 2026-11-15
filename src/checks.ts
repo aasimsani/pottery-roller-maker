@@ -15,6 +15,10 @@ export interface RollerCheckInput {
   solidFallback: boolean;
   /** Whether the handle is off, fine, missing its axle hole, or too big for the bed. */
   handle: 'off' | 'ok' | 'no-bore' | 'too-big';
+  /** Whether the inside support is off or fine, or why the pot can't take one. */
+  support: 'off' | 'ok' | 'flat' | 'no-bore' | 'narrow' | 'short' | 'too-big';
+  /** The narrowest inside diameter the support's frame passes through, and the narrowest it can pass, in mm. */
+  supportOpening: number; supportNeeds: number;
   /** True when the roller's side follows the pot's wall. A straight roller is a plain cylinder. */
   shaped: boolean;
   /** How far the wall strays from a straight line across the band, in mm. */
@@ -69,6 +73,12 @@ export function rollerChecks(i: RollerCheckInput): Check[] {
     'Shallow relief lets underglaze reach the low parts. 1.5 mm or more keeps them clean.');
   add(i.handle !== 'no-bore', 'handle-bore', 'warn', 'The handle needs an axle hole. Set the axle hole above 0, or turn the handle off.');
   add(i.handle !== 'too-big', 'handle-bed', 'warn', 'The handle is bigger than the bed. Shorten its grip.');
+  add(i.support !== 'flat', 'support-flat', 'warn', 'A plate or a dish lies on the table, which already backs it up. Turn the inside support off.');
+  add(i.support !== 'no-bore', 'support-bore', 'warn', 'The inside support needs an axle hole. Set the axle hole above 0, or turn the inside support off.');
+  add(i.support !== 'narrow', 'support-narrow', 'warn',
+    `The pot is ${i.supportOpening.toFixed(0)} mm wide inside at its narrowest, and the inside support needs ${i.supportNeeds.toFixed(0)} mm to get in. Back the wall up with a hand or a sponge on a stick, or turn the inside support off.`);
+  add(i.support !== 'short', 'support-short', 'warn', 'Too little of the band is left above the pot\u2019s floor for an inside support. Raise the band\u2019s top, or turn the inside support off.');
+  add(i.support !== 'too-big', 'support-bed', 'warn', 'The inside support\u2019s frame is longer than the bed. Shorten the grip, or pick a band nearer the rim.');
   add(!i.solidFallback, 'solid-fallback', 'warn', 'The drum is too thin for spokes, so it prints solid. Use a thinner wall, or more turns per lap for a smaller pot.');
   return out.sort((a, b) => (a.level === b.level ? 0 : a.level === 'error' ? -1 : 1));
 }

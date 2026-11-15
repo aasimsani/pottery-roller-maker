@@ -184,7 +184,8 @@ function spoke(r0: number, r1: number, w: number, a: number, z0: number, z1: num
   return { positions: pos, indices: Uint32Array.from(quads.flatMap(([p, q, r, t]) => [p, q, r, p, r, t])) };
 }
 
-const FLAT: Heightmap = { w: 1, h: 1, data: new Float32Array(1) };
+/** A pattern with nothing raised, for the plain parts of a drum and for a smooth roller. */
+export const FLAT: Heightmap = { w: 1, h: 1, data: new Float32Array(1) };
 
 // latheMesh() spins a closed (r, z) outline round the z axis into a closed solid. The outline must stay off the axis.
 // The outline can run either way round, because the mesh flips its winding when its volume comes out negative.

@@ -19,9 +19,11 @@ design library, and layers.
    filament that each build uses.
 6. **Add a handle.** Under **Handle**, keep **Print a handle and an axle** on, and set the grip length. The handle prints
    flat, and the axle prints standing on its head. An 8 mm dowel works instead of the printed axle.
+   For soft clay, turn on **Inside support** and set the clay wall's thickness. It adds a smooth roller on a frame that
+   goes inside the pot. Hold it against the inside of the wall, opposite the texture roller, so the wall can't give way.
 7. **Check the roller.** Fix every error that the **Print check** marks.
 8. **Download it.** **Download roller + handle (.3mf)** puts the roller, the handle and the axle on one plate.
-   **Download STL** saves the roller alone.
+   **Download STL** saves the roller alone, and **Download inside support (.3mf)** saves the support's three parts.
 
 A straight roller rolls cleanly only on a straight wall. The print check warns you when the band tapers or bows, and
 it offers **Shape the roller to the pot**. A shaped roller's side follows the pot's wall, so it touches along the whole

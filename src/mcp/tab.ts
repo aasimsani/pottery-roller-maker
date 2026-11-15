@@ -8,6 +8,7 @@ import { builtinRef, searchBuiltin } from '../sources/builtin';
 import { searchIconify } from '../sources/iconify';
 import { capture3d } from '../ui/scene';
 import { plate3mf } from '../core/plate';
+import { plateParts } from '../export';
 import { setViewMode } from './viewMode';
 import { shrinkImage } from '../render/shrink';
 import { listSpots, thinOnRoller } from '../core/fix';
@@ -49,12 +50,16 @@ const found = new Map<string, DesignRef>();
 // A shaped roller's outline is hundreds of numbers that Claude never reads, so replies leave it out.
 const withoutOutline = ({ outline: _outline, ...roller }: RollerResult['roller']) => roller;
 
+// supportSummary() is the inside support in numbers, without its STLs: the roller's diameters and length, the heights
+// inside the pot that it covers, and the frame's size lying flat, all in mm.
+const supportSummary = ({ minD, maxD, length, fromZ, toZ, size }: NonNullable<RollerResult['support']>) => ({ minD, maxD, length, fromZ, toZ, frame: size });
+
 export function makeHandlers(api: TabApi): Record<string, Handler> {
   const summary = () => {
     const { s, layers, result: r, error } = api.get();
     return {
       ...(error ? { error } : {}),
-      roller: r && withoutOutline(r.roller), grams: r && Math.round(r.grams), otherBuildGrams: r && Math.round(r.otherGrams), build: s.build.kind,
+      roller: r && withoutOutline(r.roller), ...(r?.support ? { support: supportSummary(r.support) } : {}), grams: r && Math.round(r.grams), otherBuildGrams: r && Math.round(r.otherGrams), build: s.build.kind,
       checks: r?.checks ?? [], fixed: r?.fixed,
       layers: layers.map((l) => ({ id: l.id, name: l.name, kind: l.kind, visible: l.visible, repeatsRoundPot: r?.layerInfo.get(l.id)?.repeats })),
     };
@@ -186,10 +191,9 @@ export function makeHandlers(api: TabApi): Record<string, Handler> {
       let blob: Blob;
       if (format === 'stl') blob = new Blob([result.stl.slice(0)], { type: 'model/stl' });
       else if (format === '3mf') {
-        // The plate carries the handle and the axle too, when the handle is on.
-        const parts = [{ name, stl: result.stl.slice(0) }, ...(result.handle ? [{ name: `${name}_handle`, stl: result.handle.stl.slice(0) }, { name: `${name}_axle`, stl: result.handle.axleStl.slice(0) }] : [])];
-        const zip = await plate3mf(parts, s.bedW, s.bedD);
-        if (!zip) throw new Error('The roller and its handle don\'t fit on one plate. Shorten the grip, or export the STL.');
+        // The plate carries the handle, the axle and the inside support too, when they are on.
+        const zip = await plate3mf(plateParts(name, result), s.bedW, s.bedD);
+        if (!zip) throw new Error('The roller and its other parts don\'t fit on one plate. Shorten the grip, or export the STL.');
         blob = new Blob([zip as BlobPart], { type: 'model/3mf' });
       }
       else blob = await new Promise<Blob>((ok, fail) => flatCanvas()?.toBlob((b) => (b ? ok(b) : fail(new Error('No flat preview.')))) ?? fail(new Error('No flat preview.')));

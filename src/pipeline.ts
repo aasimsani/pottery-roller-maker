@@ -5,9 +5,10 @@ import { linePeriod, makeLinesTile } from './core/lines';
 import { bandOnPiece, isFlat, wallAt, type Band } from './core/piece';
 import { bow, fitRoller } from './core/shape';
 import { dropSpots, fixRelief, thinOnRoller } from './core/fix';
-import { drumParts, filamentGrams, heightmapFromBits, mergeMeshes, toSTL, type DrumBuild, type RollerSpec } from './core/roller';
+import { drumParts, filamentGrams, FLAT, heightmapFromBits, mergeMeshes, toSTL, type DrumBuild, type Mesh, type RollerSpec } from './core/roller';
 import { BED_MARGIN, rollerChecks, type Check } from './checks';
-import { handleParts } from './core/handle';
+import { handleParts, supportParts } from './core/handle';
+import { fitSupport } from './core/support';
 import { packPlate } from './core/plate';
 import { renderTile } from './render/tile';
 import { refKey, type Art } from './render/art';
@@ -50,6 +51,19 @@ export interface RollerResult {
   grams: number; otherGrams: number;
   /** The handle, which prints flat, and its axle, which prints standing up. Both are absent when the handle is off. */
   handle?: { stl: ArrayBuffer; axleStl: ArrayBuffer; size: [number, number, number] };
+  /**
+   * The inside support: a smooth roller that prints standing up, a frame that prints flat, and an axle. It is absent
+   * when the support is off or the pot can't take one. minD and maxD are the roller's thinnest and widest diameters,
+   * length is its length along the axis, and fromZ and toZ are the heights inside the pot that it covers, all in mm.
+   */
+  support?: { stl: ArrayBuffer; frameStl: ArrayBuffer; axleStl: ArrayBuffer; size: [number, number, number]; minD: number; maxD: number; length: number; fromZ: number; toZ: number; grams: number };
+}
+
+// extent() measures a mesh's width, depth and height, in mm.
+function extent(m: Mesh): [number, number, number] {
+  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+  for (let k = 0; k < m.positions.length; k++) { lo[k % 3] = Math.min(lo[k % 3], m.positions[k]); hi[k % 3] = Math.max(hi[k % 3], m.positions[k]); }
+  return [hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]];
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
@@ -176,11 +190,26 @@ export function finishRoller(s: Settings, { gp, maskLayers, layerInfo, band, rol
   if (s.handle && s.bore <= 0) handleState = 'no-bore';
   else if (s.handle) {
     const h = handleParts({ rollerLength: roller.axial, rollerDiameter: roller.maxD, bore: s.bore, grip: s.grip }), fork = mergeMeshes(h.fork);
-    const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
-    for (let k = 0; k < fork.positions.length; k++) { lo[k % 3] = Math.min(lo[k % 3], fork.positions[k]); hi[k % 3] = Math.max(hi[k % 3], fork.positions[k]); }
-    const size: [number, number, number] = [hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]];
+    const size = extent(fork);
     handle = { stl: toSTL(fork), axleStl: toSTL(h.axle), size };
     handleState = packPlate([[size[0], size[1]]], s.bedW, s.bedD, 0, BED_MARGIN) ? 'ok' : 'too-big';
+  }
+
+  // The inside support is a smooth roller shaped to the inside of the band. Its frame reaches in through the pot's mouth.
+  let support: RollerResult['support'], supportState: 'off' | 'ok' | 'flat' | 'no-bore' | 'narrow' | 'short' | 'too-big' = 'off', opening = 0, needs = 0;
+  if (s.support && isFlat(s.piece)) supportState = 'flat';
+  else if (s.support && s.bore <= 0) supportState = 'no-bore';
+  else if (s.support) {
+    const fit = fitSupport(s.piece, band, s.clay, s.bore);
+    supportState = fit.state; opening = fit.opening; needs = fit.needs;
+    if (fit.state === 'ok') {
+      // A smooth roller needs no fine mesh, so 0.8 mm keeps the file small.
+      const smooth: RollerSpec = { diameter: fit.diameter, length: fit.length, depth: 0, repeats: 1, rim: 0, bore: s.bore, cell: Math.max(s.cell, 0.8), mirror: false, outline: fit.outline };
+      const drum = drumParts(FLAT, smooth, s.build), f = supportParts({ rollerLength: fit.axial, rollerDiameter: fit.maxD, bore: s.bore, grip: s.grip + fit.reach });
+      const frame = mergeMeshes(f.frame), size = extent(frame);
+      if (!packPlate([[size[0], size[1]]], s.bedW, s.bedD, 0, BED_MARGIN)) supportState = 'too-big';
+      else support = { stl: toSTL(mergeMeshes(drum)), frameStl: toSTL(frame), axleStl: toSTL(f.axle), size, minD: fit.minD, maxD: fit.maxD, length: fit.axial, fromZ: fit.fromZ, toZ: fit.toZ, grams: filamentGrams(drum, smooth, s.build) };
+    }
   }
 
   const checks = rollerChecks({
@@ -188,9 +217,10 @@ export function finishRoller(s: Settings, { gp, maskLayers, layerInfo, band, rol
     relief: inside ? raised / inside : 0, thinReliefSpots: thinRelief.spots, thinGapSpots: thinGaps.spots, minPlastic: s.minPlastic, minHole: s.minHole,
     use: s.use, depth: s.depth, boreWall: roller.minD / 2 - s.depth - s.bore / 2, solidFallback: s.build.kind === 'hollow' && parts.length === 1,
     handle: handleState, shaped: !!roller.outline, bow: roller.bow, slip: roller.slip,
+    support: supportState, supportOpening: opening, supportNeeds: needs,
   });
   return {
-    g, gp, mask, band, roller, thinRelief: thinRelief.mask, thinGaps: thinGaps.mask, checks, fixed, layerInfo, stl, handle,
+    g, gp, mask, band, roller, thinRelief: thinRelief.mask, thinGaps: thinGaps.mask, checks, fixed, layerInfo, stl, handle, support,
     grams: filamentGrams(parts, spec, s.build), otherGrams: filamentGrams(drumParts(map, coarse, other), coarse, other),
   };
 }

@@ -4,7 +4,7 @@ import { rollerChecks, type RollerCheckInput } from './checks';
 const ok: RollerCheckInput = {
   diameter: 40, length: 80, bedW: 256, bedD: 256, bedH: 256, potD: 80, taper: 0, relief: 0.3,
   thinReliefSpots: 0, thinGapSpots: 0, use: 'texture', depth: 1.2, boreWall: 10, solidFallback: false, minPlastic: 0.8, minHole: 0.8,
-  handle: 'off', shaped: false, bow: 0, slip: 0,
+  handle: 'off', shaped: false, bow: 0, slip: 0, support: 'off', supportOpening: 70, supportNeeds: 42,
 };
 const ids = (o: Partial<RollerCheckInput>) => rollerChecks({ ...ok, ...o }).map((c) => `${c.level}:${c.id}`);
 
@@ -62,4 +62,16 @@ test('a shaped roller on a strong curve warns that the pattern drags, with the a
 test('underglaze only kisses the clay, so it drags less, and a finer nozzle tolerates less', () => {
   expect(ids({ shaped: true, slip: 0.15, use: 'underglaze', depth: 1.5 })).toEqual([]);
   expect(ids({ shaped: true, slip: 0.15, use: 'underglaze', depth: 1.5, minPlastic: 0.4 })).toEqual(['warn:smear']);
+});
+
+test('inside-support problems are warnings that say what the support needs', () => {
+  expect(ids({ support: 'ok' })).toEqual([]);
+  expect(ids({ support: 'flat' })).toEqual(['warn:support-flat']);
+  expect(ids({ support: 'no-bore' })).toEqual(['warn:support-bore']);
+  expect(ids({ support: 'short' })).toEqual(['warn:support-short']);
+  expect(ids({ support: 'too-big' })).toEqual(['warn:support-bed']);
+  const [narrow] = rollerChecks({ ...ok, support: 'narrow', supportOpening: 30, supportNeeds: 42 });
+  expect(narrow.id).toBe('support-narrow');
+  expect(narrow.message).toContain('30 mm');
+  expect(narrow.message).toContain('42 mm');
 });

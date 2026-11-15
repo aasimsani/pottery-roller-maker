@@ -10,6 +10,12 @@ export const AXLE_PLAY = 0.4;
 /** The arms' holes are this much wider than the axle, so it pushes in snugly and stays put, in mm. */
 const ARM_FIT = 0.2;
 const GRIP_WIDTH = 22;
+/** The space between the roller and the bar that joins the arms, in mm. */
+export const BACK_GAP = 6;
+/** The thickness of the inside support's lower arm, in mm. It is thin, so the roller reaches close to the pot's floor. */
+export const FOOT = 5;
+/** The arms and the bar are square in section, and this wide, in mm. */
+export const armSide = (bore: number) => Math.max(14, bore + 6);
 
 // flipIfInside() reverses every triangle when the mesh's volume comes out negative, so its normals point out.
 function flipIfInside(m: Mesh): Mesh {
@@ -64,8 +70,8 @@ function holedBlock(x0: number, x1: number, side: number, r: number): Mesh {
 // The roller sits between the two arms. The axle passes through the arms and the roller along x, at y = 0.
 // ponytail: the fork's parts overlap by 0.5 mm and the slicer unions them, the same as the drum's spokes.
 export function handleParts(h: HandleSpec): { fork: Mesh[]; axle: Mesh } {
-  const axleD = h.bore - AXLE_PLAY, side = Math.max(14, h.bore + 6), gap = h.rollerLength + 2 * END_CLEARANCE;
-  const r = (axleD + ARM_FIT) / 2, x = gap / 2, yb = h.rollerDiameter / 2 + 6;
+  const axleD = h.bore - AXLE_PLAY, side = armSide(h.bore), gap = h.rollerLength + 2 * END_CLEARANCE;
+  const r = (axleD + ARM_FIT) / 2, x = gap / 2, yb = h.rollerDiameter / 2 + BACK_GAP;
   const fork = [
     holedBlock(-x - side, -x, side, r),
     holedBlock(x, x + side, side, r),
@@ -78,4 +84,24 @@ export function handleParts(h: HandleSpec): { fork: Mesh[]; axle: Mesh } {
   const len = gap + 2 * side + 1.5, head = axleD / 2 + 2;
   const axle = latheMesh([[0.8, 0], [head, 0], [head, 2], [axleD / 2, 2], [axleD / 2, 2 + len], [0.8, 2 + len]], 64);
   return { fork, axle };
+}
+
+// supportParts() builds the frame that holds a smooth roller against the inside of a pot, and its axle. The frame
+// prints flat. A bar runs beside the roller and carries on past its top end as the grip, so the grip comes straight
+// up out of the pot's mouth. The roller sits between a thin foot at the floor end and a full arm at the top end.
+// The axle goes in from the grip end, and it ends flush with the foot, so nothing reaches below the foot.
+export function supportParts(h: HandleSpec): { frame: Mesh[]; axle: Mesh } {
+  const axleD = h.bore - AXLE_PLAY, side = armSide(h.bore), gap = h.rollerLength + 2 * END_CLEARANCE;
+  const r = (axleD + ARM_FIT) / 2, x = gap / 2, yb = h.rollerDiameter / 2 + BACK_GAP, mid = yb + side / 2;
+  const frame = [
+    holedBlock(-x - FOOT, -x, side, r),
+    holedBlock(x, x + side, side, r),
+    box(-x - FOOT, -x, side / 2 - 0.5, yb + 0.5, 0, side),
+    box(x, x + side, side / 2 - 0.5, yb + 0.5, 0, side),
+    box(-x - FOOT, x + side, yb, yb + side, 0, side),
+    box(x + side - 0.5, x + side + h.grip, mid - GRIP_WIDTH / 2, mid + GRIP_WIDTH / 2, 0, side),
+  ];
+  const len = FOOT + gap + side, head = axleD / 2 + 2;
+  const axle = latheMesh([[0.8, 0], [head, 0], [head, 2], [axleD / 2, 2], [axleD / 2, 2 + len], [0.8, 2 + len]], 64);
+  return { frame, axle };
 }

@@ -128,3 +128,30 @@ describe('tightenPx', () => {
     expect(tightenPx(5.33, 1)).toBeCloseTo(5.33);
   });
 });
+
+describe('inside support', () => {
+  const stlOk = (stl: ArrayBuffer) => expect(new DataView(stl).getUint32(80, true)).toBe((stl.byteLength - 84) / 50);
+  it('comes as a smooth roller, a frame and an axle, each its own STL', () => {
+    const r = computeRoller({ ...s, support: true }, [newLinesLayer()], new Map());
+    expect(r.support).toBeDefined();
+    for (const stl of [r.support!.stl, r.support!.frameStl, r.support!.axleStl]) stlOk(stl);
+    // The mug is 80 mm outside and the clay is 6 mm thick, so the inside is 68 mm and the roller takes half of it.
+    expect(r.support!.minD).toBeCloseTo(34);
+    expect(r.support!.maxD).toBeCloseTo(34);
+    expect(r.support!.length).toBeCloseTo(50);
+    expect(r.checks.map((c) => c.id)).toEqual([]);
+  });
+  it('is left out when it is off, and warns when the pot can\'t take one', () => {
+    expect(computeRoller(s, [newLinesLayer()], new Map()).support).toBeUndefined();
+    const ids = (o: Partial<Settings>) => { const r = computeRoller({ ...s, support: true, ...o }, [newLinesLayer()], new Map()); expect(r.support).toBeUndefined(); return r.checks.map((c) => c.id); };
+    expect(ids({ bore: 0, handle: false })).toContain('support-bore');
+    expect(ids({ bedW: 100, bedD: 100, handle: false })).toContain('support-bed');
+    expect(ids({ piece: { name: 'Bottle', profile: [{ z: 0, d: 90 }, { z: 100, d: 90 }, { z: 130, d: 40 }] } })).toContain('support-narrow');
+  });
+  it('lengthens the grip when the band sits deep in a tall pot, so the grip still clears the rim', () => {
+    const tall = { name: 'Vase', profile: [{ z: 0, d: 100 }, { z: 200, d: 100 }] };
+    const deep = computeRoller({ ...s, piece: tall, support: true, bandFrom: 70, bandTo: 130 }, [newLinesLayer()], new Map());
+    const high = computeRoller({ ...s, piece: tall, support: true, bandFrom: 130, bandTo: 190 }, [newLinesLayer()], new Map());
+    expect(deep.support!.size[0]).toBeGreaterThan(high.support!.size[0] + 50);
+  });
+});

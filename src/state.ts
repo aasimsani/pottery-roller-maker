@@ -27,6 +27,10 @@ export interface Settings {
   build: DrumBuild;
   /** Prints a U-shaped handle and an axle with the roller, and the grip's length in mm. */
   handle: boolean; grip: number;
+  /** Prints a smooth roller on a frame that goes inside the pot and backs the wall up while the texture roller presses on the outside. */
+  support: boolean;
+  /** How thick the pot's wall is, in mm. The inside support is sized to the inside of the pot, which is this far in. */
+  clay: number;
   /** Raster pixel size for the pattern, and the drum mesh's spacing, in mm. */
   res: number; cell: number;
   // Printer (Bambu Lab P2S defaults)
@@ -53,7 +57,7 @@ export const DEFAULTS: Settings = {
   bandFrom: 15, bandTo: 80, ends: 4,
   laps: 2, use: 'texture', shape: 'straight', depth: 1.2, soften: 0.3, mirror: true, bore: 8.2,
   build: { kind: 'hollow', wall: 2, spokes: 6, spokeW: 3, hub: 3, plate: 6, infill: 0.15 },
-  handle: true, grip: 90,
+  handle: true, grip: 90, support: false, clay: 6,
   res: 0.15, cell: 0.4,
   bedW: 256, bedD: 256, bedH: 256,
   nozzle: 0.4, minPlastic: 0.8, minHole: 0.8, strict: true, fixLines: 'off', fixGaps: 'off', fixLinesBy: 0, fixGapsBy: 0, spotFixes: [],

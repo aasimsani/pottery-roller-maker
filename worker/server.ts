@@ -51,7 +51,7 @@ export function buildServer(callTab: CallTab, mintUploadUrl: () => Promise<strin
     (a) => callTab('viewRegion', a));
   tool('describe_coverage', 'Describe the pattern in text, with no image. It splits the pattern into cols × rows cells, and gives each cell its share raised and its count of flagged spots. Keep the grid small, because a few cells say enough to find where to look.',
     z.object({ cols: z.number().int().min(1).max(12).default(4), rows: z.number().int().min(1).max(6).default(2), show }), (a) => callTab('describeCoverage', a));
-  tool('update_settings', 'Merge a patch into the settings, such as {"depth": 2}, {"build": {"kind": "solid"}}, or {"shape": "pot"} to shape the side of the roller to a curved or tapered pot. Unknown keys and wrong types are rejected.',
+  tool('update_settings', 'Merge a patch into the settings, such as {"depth": 2}, {"build": {"kind": "solid"}}, {"shape": "pot"} to shape the side of the roller to a curved or tapered pot, or {"support": true, "clay": 6} to add a smooth roller that backs the wall up from inside a pot with 6 mm walls. Unknown keys and wrong types are rejected.',
     z.object({ patch, view }), (a) => apply([{ op: 'settings', patch: a.patch }], a.view));
   tool('add_lines', 'Add a lines layer on top.', z.object({ view }), (a) => apply([{ op: 'addLayer', kind: 'lines' }], a.view));
   tool('search_library', 'Search a design library. Pass a result\'s source and id to add_design.',
