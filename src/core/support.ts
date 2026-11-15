@@ -1,6 +1,6 @@
 // support.ts sizes a smooth roller that goes inside a pot. It backs the wall up while a texture roller presses on the
 // outside, so soft clay takes the pattern and the pot keeps its shape.
-import { END_CLEARANCE, BACK_GAP, FOOT, armSide } from './handle';
+import { END_CLEARANCE, FOOT, armSide, frameSpan } from './handle';
 import { surfaceLength, wallAt, type Piece } from './piece';
 import { fitRoller, type WallPoint } from './shape';
 
@@ -8,10 +8,13 @@ import { fitRoller, type WallPoint } from './shape';
 const MIN_D = 18;
 /** The widest support roller, in mm. A wider one only adds filament, because the inside of a pot already wraps round it. */
 const MAX_D = 45;
-/** Air left under the frame's foot, and between the frame and the far side of the pot, in mm. */
+/** Air left under the frame's foot, and between the frame's grip and the far side of the pot, in mm. */
 const FLOOR_GAP = 1, SIDE_GAP = 4;
 /** The shortest roller that still helps, in mm. */
 const MIN_LENGTH = 15;
+
+/** What the person can adjust. A diameter of 0 lets the fit pick one. Below and above reach past the band's edges, and a negative number falls short of them, in mm. */
+export interface SupportOptions { diameter?: number; below?: number; above?: number }
 
 export interface SupportFit {
   /** The pot's opening can be too narrow for the roller and its frame, and the band can sit too low to leave room for a roller. */
@@ -42,13 +45,16 @@ function innerAt(piece: Piece, s: number, clay: number): WallPoint {
 // scrubbing. The floor is taken to be as thick as the wall, and the roller starts above the frame's foot.
 // ponytail: the axis is treated as upright when the frame is checked against the floor and the rim. A strongly
 // tapered pot leans it a few degrees, so check the corners by hand if the frame ever catches there.
-export function fitSupport(piece: Piece, band: { start: number; slant: number }, clay: number, bore: number): SupportFit {
+export function fitSupport(piece: Piece, band: { start: number; slant: number }, clay: number, bore: number, o: SupportOptions = {}): SupportFit {
   const side = armSide(bore), base = piece.profile[0].z, rim = piece.profile[piece.profile.length - 1].z, S = surfaceLength(piece);
-  const lowest = base + clay + FOOT + END_CLEARANCE + FLOOR_GAP, n = Math.max(2, Math.ceil(band.slant / 0.5));
+  const lowest = base + clay + FOOT + END_CLEARANCE + FLOOR_GAP;
+  // The reach moves the roller's two ends along the pot's surface, and the pot's floor and rim stop them.
+  const s0 = Math.max(0, band.start - (o.below ?? 0)), s1 = Math.min(S, band.start + band.slant + (o.above ?? 0)), span = Math.max(0, s1 - s0);
+  const n = Math.max(2, Math.ceil(span / 0.5));
   const wall: WallPoint[] = [];
-  let from = band.start + band.slant;
+  let from = s1;
   for (let i = 0; i <= n; i++) {
-    const s = band.start + (band.slant * i) / n, p = innerAt(piece, s, clay);
+    const s = s0 + (span * i) / n, p = innerAt(piece, s, clay);
     if (p.z < lowest) continue;
     if (!wall.length) from = s;
     wall.push(p);
@@ -56,15 +62,19 @@ export function fitSupport(piece: Piece, band: { start: number; slant: number },
   let opening = Infinity;
   for (let s = from; s <= S; s += 1) opening = Math.min(opening, 2 * innerAt(piece, s, clay).r);
   opening = Math.min(opening, 2 * innerAt(piece, S, clay).r);
-  const needs = MIN_D + BACK_GAP + side + SIDE_GAP, want = Math.min(opening / 2, opening - BACK_GAP - side - SIDE_GAP, MAX_D);
+  // The frame crosses the pot, so the roller can be as wide as the opening less the frame's other parts and some air.
+  const given = o.diameter && o.diameter > 0 ? Math.max(MIN_D, o.diameter) : 0, around = frameSpan(0, bore) + SIDE_GAP;
+  const needs = frameSpan(given || MIN_D, bore) + SIDE_GAP, want = given || Math.min(opening / 2, opening - around, MAX_D);
   let length = 0;
   for (let i = 1; i < wall.length; i++) length += Math.hypot(wall[i].r - wall[i - 1].r, wall[i].z - wall[i - 1].z);
   const none: SupportFit = { state: 'short', opening, needs, outline: { t: [], r: [] }, diameter: 0, minD: 0, maxD: 0, axial: 0, length, slip: 0, fromZ: 0, toZ: 0, reach: 0 };
   if (length < MIN_LENGTH) return none;
-  if (want < MIN_D) return { ...none, state: 'narrow' };
+  if (want < MIN_D || needs > opening) return { ...none, state: 'narrow' };
   const meanR = wall.reduce((a, p) => a + p.r, 0) / wall.length;
   const fit = fitRoller(wall, [0, wall.length - 1], (2 * meanR) / want, -1), minD = 2 * Math.min(...fit.r), maxD = 2 * Math.max(...fit.r);
-  if (minD < MIN_D) return { ...none, state: 'narrow' };
+  // A bellied pot makes the roller wider in places than its mean, and the frame has to clear the widest part.
+  const tight = frameSpan(maxD, bore) + SIDE_GAP;
+  if (minD < MIN_D - 1e-6 || tight > opening) return { ...none, state: 'narrow', needs: Math.max(needs, tight) };
   const toZ = wall[wall.length - 1].z;
   return {
     state: 'ok', opening, needs, outline: { t: fit.t, r: fit.r }, diameter: (2 * fit.r.reduce((a, v) => a + v, 0)) / fit.r.length, minD, maxD,

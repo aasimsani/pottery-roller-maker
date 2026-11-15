@@ -21,6 +21,8 @@ design library, and layers.
    flat, and the axle prints standing on its head. An 8 mm dowel works instead of the printed axle.
    For soft clay, turn on **Inside support** and set the clay wall's thickness. It adds a smooth roller on a frame that
    goes inside the pot. Hold it against the inside of the wall, opposite the texture roller, so the wall can't give way.
+   Set its diameter, and how far it reaches past the band at either end, to suit the pot. The app picks the widest roller
+   that fits through the pot's mouth when the diameter is 0.
 7. **Check the roller.** Fix every error that the **Print check** marks.
 8. **Download it.** **Download roller + handle (.3mf)** puts the roller, the handle and the axle on one plate.
    **Download STL** saves the roller alone, and **Download inside support (.3mf)** saves the support's three parts.

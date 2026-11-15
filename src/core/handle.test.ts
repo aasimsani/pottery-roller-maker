@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FOOT, handleParts, supportParts, type HandleSpec } from './handle';
+import { FOOT, frameSpan, handleParts, supportParts, type HandleSpec } from './handle';
 import { volume, type Mesh } from './roller';
 import { closed, overhangs } from '../test/meshChecks';
 
@@ -58,5 +58,11 @@ describe('supportParts', () => {
     const { frame, axle } = supportParts(spec()), a = box(axle), all = frame.map(box);
     // The 2 mm head stops at the full arm, and the shaft spans the arm, the roller's gap and the foot.
     expect(a.hi[2] - a.lo[2]).toBeCloseTo(2 + (all[1].hi[0] - all[0].lo[0]));
+  });
+  it('reports the width it needs inside a pot, from the roller\'s pressing side to the grip\'s far edge', () => {
+    for (const s of [spec({ rollerDiameter: 34 }), spec({ rollerDiameter: 26, bore: 12 })]) {
+      const reach = Math.max(...supportParts(s).frame.map((p) => box(p).hi[1]));
+      expect(frameSpan(s.rollerDiameter, s.bore)).toBeCloseTo(s.rollerDiameter / 2 + reach);
+    }
   });
 });

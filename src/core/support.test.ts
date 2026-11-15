@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { FOOT, frameSpan } from './handle';
 import { fitSupport } from './support';
 
 const mug = { name: 'Mug', profile: [{ z: 0, d: 80 }, { z: 95, d: 80 }] };
@@ -54,5 +55,38 @@ describe('fitSupport', () => {
     // The top arm is 14.2 mm thick and sits 0.6 mm above the roller, whose top is at 100 mm.
     expect(f.reach).toBeCloseTo(200 - (100 + 0.6 + 14.2));
     expect(fitSupport(mug, { start: 5, slant: 85 }, 5, 8.2).reach).toBe(0);
+  });
+
+  describe('adjustments', () => {
+    const band = { start: 30, slant: 40 };
+    it('uses the diameter it is given instead of the automatic one', () => {
+      const f = fitSupport(mug, band, 6, 8.2, { diameter: 26 });
+      expect(f.state).toBe('ok');
+      expect(f.diameter).toBeCloseTo(26);
+      expect(fitSupport(mug, band, 6, 8.2).diameter).toBeCloseTo(34);
+    });
+    it('never goes thinner than the smallest roller that has room for the axle', () => {
+      expect(fitSupport(mug, band, 6, 8.2, { diameter: 5 }).diameter).toBeCloseTo(18);
+    });
+    it('says narrow, and what it needs, when the diameter it is given can\'t pass the pot\'s mouth', () => {
+      const f = fitSupport(mug, band, 6, 8.2, { diameter: 48 });
+      expect(f.state).toBe('narrow');
+      expect(f.needs).toBeCloseTo(frameSpan(48, 8.2) + 4);
+      expect(f.needs).toBeGreaterThan(f.opening);
+    });
+    it('reaches past the band at either end, and falls short of it with a negative number', () => {
+      const more = fitSupport(mug, band, 6, 8.2, { below: 10, above: 10 });
+      expect(more.fromZ).toBeCloseTo(20); expect(more.toZ).toBeCloseTo(80); expect(more.axial).toBeCloseTo(60);
+      const less = fitSupport(mug, band, 6, 8.2, { below: -5, above: -5 });
+      expect(less.fromZ).toBeCloseTo(35); expect(less.toZ).toBeCloseTo(65); expect(less.axial).toBeCloseTo(30);
+    });
+    it('stops at the floor and the rim however far it is told to reach', () => {
+      const f = fitSupport(mug, band, 6, 8.2, { below: 500, above: 500 });
+      expect(f.fromZ).toBeGreaterThanOrEqual(6 + FOOT + 0.6);
+      expect(f.toZ).toBeLessThanOrEqual(95 + 1e-6);
+    });
+    it('says short when the reach leaves under 15 mm of roller', () => {
+      expect(fitSupport(mug, band, 6, 8.2, { below: -20, above: -10 }).state).toBe('short');
+    });
   });
 });

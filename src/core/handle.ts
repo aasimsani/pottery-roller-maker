@@ -16,6 +16,8 @@ export const BACK_GAP = 6;
 export const FOOT = 5;
 /** The arms and the bar are square in section, and this wide, in mm. */
 export const armSide = (bore: number) => Math.max(14, bore + 6);
+/** The room the support's frame takes across a pot, from the roller's pressing side to the grip's far edge, in mm. */
+export const frameSpan = (rollerDiameter: number, bore: number) => rollerDiameter + BACK_GAP + armSide(bore) / 2 + GRIP_WIDTH / 2;
 
 // flipIfInside() reverses every triangle when the mesh's volume comes out negative, so its normals point out.
 function flipIfInside(m: Mesh): Mesh {

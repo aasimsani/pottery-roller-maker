@@ -150,6 +150,11 @@ export function Controls({ s, set, result, onPhoto, onScale }: { s: Settings; se
         {s.support && (
           <>
             <NumberField label="Clay wall thickness" unit="mm" value={s.clay} min={2} max={20} step={0.5} onChange={(v) => set('clay', v)} />
+            <NumberField label="Roller diameter" unit="mm" value={s.supportD} min={0} max={90} step={1} onChange={(v) => set('supportD', v)} />
+            <p className="hint">0 lets the app pick the widest roller that fits through the pot's mouth, up to 45 mm{result?.support && s.supportD === 0 ? `, which is Ø${result.support.maxD.toFixed(0)} mm here` : ''}. A thinner roller is lighter and fits narrower pots. A wider one touches more of the wall at once. The smallest is 18 mm.</p>
+            <NumberField label="Reach below the band" unit="mm" value={s.supportBelow} min={-40} max={40} step={1} onChange={(v) => set('supportBelow', v)} />
+            <NumberField label="Reach above the band" unit="mm" value={s.supportAbove} min={-40} max={40} step={1} onChange={(v) => set('supportAbove', v)} />
+            <p className="hint">0 makes the support roller cover the same stretch of wall as the texture roller. A positive number reaches past the band, which holds the wall up where the texture roller starts and stops. A negative number falls short of it. The floor and the rim stop it.</p>
             <p className="hint">Soft clay gives way when a roller presses on it. Hold this roller against the inside of the wall, opposite the texture roller, and the wall stays put between the two. It follows the inside of the band, and its frame comes up out of the pot's mouth as the grip.</p>
             {result?.support && <p className="hint">The support roller is Ø{result.support.minD.toFixed(0)}{result.support.maxD - result.support.minD > 0.5 ? `–${result.support.maxD.toFixed(0)}` : ''} × {result.support.length.toFixed(0)} mm, and it covers the inside from {result.support.fromZ.toFixed(0)} to {result.support.toZ.toFixed(0)} mm above the table. Its frame is {result.support.size[0].toFixed(0)} × {result.support.size[1].toFixed(0)} mm and prints flat. <b>Download inside support</b> saves its three parts on one plate.</p>}
           </>

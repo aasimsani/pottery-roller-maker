@@ -154,4 +154,17 @@ describe('inside support', () => {
     const high = computeRoller({ ...s, piece: tall, support: true, bandFrom: 130, bandTo: 190 }, [newLinesLayer()], new Map());
     expect(deep.support!.size[0]).toBeGreaterThan(high.support!.size[0] + 50);
   });
+  it('follows the diameter and the reach it is given', () => {
+    const base = computeRoller({ ...s, support: true }, [newLinesLayer()], new Map()).support!;
+    const adjusted = computeRoller({ ...s, support: true, supportD: 26, supportBelow: 5, supportAbove: 10 }, [newLinesLayer()], new Map()).support!;
+    expect(adjusted.minD).toBeCloseTo(26);
+    expect(adjusted.length).toBeCloseTo(base.length + 15);
+    expect(adjusted.fromZ).toBeCloseTo(base.fromZ - 5);
+    expect(adjusted.toZ).toBeCloseTo(base.toZ + 10);
+  });
+  it('warns when the diameter it is given won\'t pass the pot\'s mouth', () => {
+    const r = computeRoller({ ...s, support: true, supportD: 60 }, [newLinesLayer()], new Map());
+    expect(r.support).toBeUndefined();
+    expect(r.checks.map((c) => c.id)).toContain('support-narrow');
+  });
 });

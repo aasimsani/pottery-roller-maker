@@ -200,7 +200,7 @@ export function finishRoller(s: Settings, { gp, maskLayers, layerInfo, band, rol
   if (s.support && isFlat(s.piece)) supportState = 'flat';
   else if (s.support && s.bore <= 0) supportState = 'no-bore';
   else if (s.support) {
-    const fit = fitSupport(s.piece, band, s.clay, s.bore);
+    const fit = fitSupport(s.piece, band, s.clay, s.bore, { diameter: s.supportD, below: s.supportBelow, above: s.supportAbove });
     supportState = fit.state; opening = fit.opening; needs = fit.needs;
     if (fit.state === 'ok') {
       // A smooth roller needs no fine mesh, so 0.8 mm keeps the file small.
