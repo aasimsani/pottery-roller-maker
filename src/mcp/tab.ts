@@ -50,9 +50,10 @@ const found = new Map<string, DesignRef>();
 // A shaped roller's outline is hundreds of numbers that Claude never reads, so replies leave it out.
 const withoutOutline = ({ outline: _outline, ...roller }: RollerResult['roller']) => roller;
 
-// supportSummary() is the inside support in numbers, without its STLs: the roller's diameters and length, the heights
-// inside the pot that it covers, and the frame's size lying flat, all in mm.
-const supportSummary = ({ minD, maxD, length, fromZ, toZ, size }: NonNullable<RollerResult['support']>) => ({ minD, maxD, length, fromZ, toZ, frame: size });
+// supportSummary() is the inside support in numbers, without its STLs: the smooth roller's diameter and length, the heights
+// inside the pot that it covers, the beam's height over the rim, the distance between the axles with every distance the
+// slider locks at, and the yoke's size lying flat, all in mm.
+const supportSummary = ({ diameter, length, fromZ, toZ, beamBottom, gap, positions, size }: NonNullable<RollerResult['support']>) => ({ diameter, length, fromZ, toZ, beamBottom, gap, positions, yoke: size });
 
 export function makeHandlers(api: TabApi): Record<string, Handler> {
   const summary = () => {

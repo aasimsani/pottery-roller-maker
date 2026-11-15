@@ -69,6 +69,7 @@ test('inside-support problems are warnings that say what the support needs', () 
   expect(ids({ support: 'flat' })).toEqual(['warn:support-flat']);
   expect(ids({ support: 'no-bore' })).toEqual(['warn:support-bore']);
   expect(ids({ support: 'short' })).toEqual(['warn:support-short']);
+  expect(ids({ support: 'shaped' })).toEqual(['warn:support-shaped']);
   expect(ids({ support: 'too-big' })).toEqual(['warn:support-bed']);
   const [narrow] = rollerChecks({ ...ok, support: 'narrow', supportOpening: 30, supportNeeds: 42 });
   expect(narrow.id).toBe('support-narrow');

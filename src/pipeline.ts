@@ -7,7 +7,8 @@ import { bow, fitRoller } from './core/shape';
 import { dropSpots, fixRelief, thinOnRoller } from './core/fix';
 import { drumParts, filamentGrams, FLAT, heightmapFromBits, mergeMeshes, toSTL, type DrumBuild, type Mesh, type RollerSpec } from './core/roller';
 import { BED_MARGIN, rollerChecks, type Check } from './checks';
-import { handleParts, supportParts } from './core/handle';
+import { handleParts } from './core/handle';
+import { caliperParts } from './core/caliper';
 import { fitSupport } from './core/support';
 import { packPlate } from './core/plate';
 import { renderTile } from './render/tile';
@@ -52,11 +53,17 @@ export interface RollerResult {
   /** The handle, which prints flat, and its axle, which prints standing up. Both are absent when the handle is off. */
   handle?: { stl: ArrayBuffer; axleStl: ArrayBuffer; size: [number, number, number] };
   /**
-   * The inside support: a smooth roller that prints standing up, a frame that prints flat, and an axle. It is absent
-   * when the support is off or the pot can't take one. minD and maxD are the roller's thinnest and widest diameters,
-   * length is its length along the axis, and fromZ and toZ are the heights inside the pot that it covers, all in mm.
+   * The inside support, a caliper that carries the texture roller outside the wall and a smooth roller inside it. The
+   * smooth roller prints standing up. The yoke, the slider and the pin print flat, and each axle prints on its head. It is
+   * absent when the support is off or the pot can't take one, and it replaces the separate handle. diameter and length
+   * are the smooth roller's, fromZ and toZ are the heights inside the pot that it covers, beamBottom is the height of the
+   * beam over the rim, and size is the yoke's footprint on the bed, all in mm. gap is the distance between the two
+   * axles, and positions lists every distance the slider locks at.
    */
-  support?: { stl: ArrayBuffer; frameStl: ArrayBuffer; axleStl: ArrayBuffer; size: [number, number, number]; minD: number; maxD: number; length: number; fromZ: number; toZ: number; grams: number };
+  support?: {
+    stl: ArrayBuffer; yokeStl: ArrayBuffer; sliderStl: ArrayBuffer; outerAxleStl: ArrayBuffer; innerAxleStl: ArrayBuffer; pinStl: ArrayBuffer;
+    size: [number, number, number]; diameter: number; length: number; fromZ: number; toZ: number; beamBottom: number; gap: number; positions: number[]; grams: number;
+  };
 }
 
 // extent() measures a mesh's width, depth and height, in mm.
@@ -195,20 +202,33 @@ export function finishRoller(s: Settings, { gp, maskLayers, layerInfo, band, rol
     handleState = packPlate([[size[0], size[1]]], s.bedW, s.bedD, 0, BED_MARGIN) ? 'ok' : 'too-big';
   }
 
-  // The inside support is a smooth roller shaped to the inside of the band. Its frame reaches in through the pot's mouth.
-  let support: RollerResult['support'], supportState: 'off' | 'ok' | 'flat' | 'no-bore' | 'narrow' | 'short' | 'too-big' = 'off', opening = 0, needs = 0;
+  // The inside support is a smooth roller on a caliper that reaches over the rim. Its two rollers have parallel axles, so
+  // a texture roller shaped to a tapered wall, which leans its axle, can't share a caliper with it.
+  let support: RollerResult['support'], supportState: 'off' | 'ok' | 'flat' | 'no-bore' | 'narrow' | 'short' | 'shaped' | 'too-big' = 'off', opening = 0, needs = 0;
   if (s.support && isFlat(s.piece)) supportState = 'flat';
   else if (s.support && s.bore <= 0) supportState = 'no-bore';
+  else if (s.support && roller.outline && roller.maxD - roller.minD > 0.5) supportState = 'shaped';
   else if (s.support) {
     const fit = fitSupport(s.piece, band, s.clay, s.bore, { diameter: s.supportD, below: s.supportBelow, above: s.supportAbove });
     supportState = fit.state; opening = fit.opening; needs = fit.needs;
     if (fit.state === 'ok') {
       // A smooth roller needs no fine mesh, so 0.8 mm keeps the file small.
-      const smooth: RollerSpec = { diameter: fit.diameter, length: fit.length, depth: 0, repeats: 1, rim: 0, bore: s.bore, cell: Math.max(s.cell, 0.8), mirror: false, outline: fit.outline };
-      const drum = drumParts(FLAT, smooth, s.build), f = supportParts({ rollerLength: fit.axial, rollerDiameter: fit.maxD, bore: s.bore, grip: s.grip + fit.reach });
-      const frame = mergeMeshes(f.frame), size = extent(frame);
+      const smooth: RollerSpec = { diameter: fit.diameter, length: fit.length, depth: 0, repeats: 1, rim: 0, bore: s.bore, cell: Math.max(s.cell, 0.8), mirror: false };
+      const drum = drumParts(FLAT, smooth, s.build), rim = s.piece.profile[s.piece.profile.length - 1].z;
+      const c = caliperParts({
+        outerR: roller.maxD / 2, outerFrom: wallAt(s.piece, band.start - s.ends).z, outerTo: wallAt(s.piece, band.start + band.slant + s.ends).z,
+        innerR: fit.diameter / 2, innerFrom: fit.fromZ, innerTo: fit.toZ, rim, clay: s.clay, sink: s.use === 'texture' ? s.depth : 0.05, bore: s.bore, grip: s.grip,
+      });
+      const size = extent(c.yoke);
       if (!packPlate([[size[0], size[1]]], s.bedW, s.bedD, 0, BED_MARGIN)) supportState = 'too-big';
-      else support = { stl: toSTL(mergeMeshes(drum)), frameStl: toSTL(frame), axleStl: toSTL(f.axle), size, minD: fit.minD, maxD: fit.maxD, length: fit.axial, fromZ: fit.fromZ, toZ: fit.toZ, grams: filamentGrams(drum, smooth, s.build) };
+      else {
+        support = {
+          stl: toSTL(mergeMeshes(drum)), yokeStl: toSTL(c.yoke), sliderStl: toSTL(c.slider), outerAxleStl: toSTL(c.outerAxle), innerAxleStl: toSTL(c.innerAxle), pinStl: toSTL(c.pin),
+          size, diameter: fit.diameter, length: fit.length, fromZ: fit.fromZ, toZ: fit.toZ, beamBottom: c.dims.beamBottom, gap: c.dims.gap, positions: c.dims.positions, grams: filamentGrams(drum, smooth, s.build),
+        };
+        // The yoke carries the texture roller and the grip, so the separate handle isn't printed.
+        handle = undefined; handleState = 'off';
+      }
     }
   }
 

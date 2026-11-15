@@ -1,37 +1,33 @@
-// support.ts sizes a smooth roller that goes inside a pot. It backs the wall up while a texture roller presses on the
-// outside, so soft clay takes the pattern and the pot keeps its shape.
-import { END_CLEARANCE, FOOT, armSide, frameSpan } from './handle';
+// support.ts sizes the smooth roller that rides inside a pot. It backs the wall up while the texture roller presses on
+// the outside, so soft clay takes the pattern and the pot keeps its shape. The caliper holds both rollers on parallel
+// axles, so the support roller is a plain cylinder.
+import { END_CLEARANCE } from './handle';
+import { FOOT, HEAD, OPEN, innerSpan } from './caliper';
 import { surfaceLength, wallAt, type Piece } from './piece';
-import { fitRoller, type WallPoint } from './shape';
+import type { WallPoint } from './shape';
 
-/** The thinnest support roller worth printing, in mm. A thinner one leaves no room round the axle and the frame's foot. */
+/** The thinnest support roller worth printing, in mm. A thinner one leaves no room round the axle. */
 const MIN_D = 18;
 /** The widest support roller, in mm. A wider one only adds filament, because the inside of a pot already wraps round it. */
 const MAX_D = 45;
-/** Air left under the frame's foot, and between the frame's grip and the far side of the pot, in mm. */
-const FLOOR_GAP = 1, SIDE_GAP = 4;
+/** Air under the axle's head, and between the slider's far end and the pot's far wall, in mm. */
+const FLOOR_AIR = 1, AIR = 3;
 /** The shortest roller that still helps, in mm. */
 const MIN_LENGTH = 15;
 
+export interface SupportFit {
+  /** The pot's opening can be too narrow for the roller and the slider, and the band can sit too low to leave room for a roller. */
+  state: 'ok' | 'narrow' | 'short';
+  /** The narrowest inside diameter between the roller and the rim, and the narrowest the slider needs, with the rollers open, in mm. */
+  opening: number; needs: number;
+  /** The roller's diameter and its length along the axle, in mm. */
+  diameter: number; length: number;
+  /** The heights of the roller's two ends above the table, in mm. */
+  fromZ: number; toZ: number;
+}
+
 /** What the person can adjust. A diameter of 0 lets the fit pick one. Below and above reach past the band's edges, and a negative number falls short of them, in mm. */
 export interface SupportOptions { diameter?: number; below?: number; above?: number }
-
-export interface SupportFit {
-  /** The pot's opening can be too narrow for the roller and its frame, and the band can sit too low to leave room for a roller. */
-  state: 'ok' | 'narrow' | 'short';
-  /** The narrowest inside diameter between the roller and the rim, and the narrowest the frame can pass, in mm. */
-  opening: number; needs: number;
-  /** The roller's side: the height along its axis (t) and its radius (r), in mm, from its floor end to its top end. */
-  outline: { t: number[]; r: number[] };
-  /** The mean, thinnest and widest diameters, the length along the axis, and the length along the surface, in mm. */
-  diameter: number; minD: number; maxD: number; axial: number; length: number;
-  /** The largest share by which the roller's surface outruns or lags the pot's inside. 0.05 means 5%. */
-  slip: number;
-  /** The heights above the table of the roller's two ends, in mm. */
-  fromZ: number; toZ: number;
-  /** How far the rim stands above the frame's top arm, in mm. The grip grows by this much, so it starts at the rim. */
-  reach: number;
-}
 
 // innerAt() is the point on the inside of the wall behind the point s mm along the outside. It lies one clay
 // thickness in from the outside, square to the wall.
@@ -40,14 +36,14 @@ function innerAt(piece: Piece, s: number, clay: number): WallPoint {
   return { r: p.r - (clay * (b.z - a.z)) / len, z: p.z + (clay * (b.r - a.r)) / len };
 }
 
-// fitSupport() shapes the roller to the inside of the band, the way fitRoller() shapes the texture roller to the
-// outside. The roller's radius is the same share of the pot's inside radius at every height, so it rolls without
-// scrubbing. The floor is taken to be as thick as the wall, and the roller starts above the frame's foot.
-// ponytail: the axis is treated as upright when the frame is checked against the floor and the rim. A strongly
-// tapered pot leans it a few degrees, so check the corners by hand if the frame ever catches there.
+// fitSupport() sizes the roller to the inside of the band. The roller starts above the floor, with room for the axle's
+// head and the lower arm, and it ends at the band's top. Its diameter is the widest that leaves the slider room to
+// pass through the pot's mouth with the rollers open, unless the person sets one.
+// ponytail: the axles are treated as upright. A strongly tapered pot leans them a few degrees, so the roller touches
+// the wall along a line and not a band, and the print check's taper warning already says so.
 export function fitSupport(piece: Piece, band: { start: number; slant: number }, clay: number, bore: number, o: SupportOptions = {}): SupportFit {
-  const side = armSide(bore), base = piece.profile[0].z, rim = piece.profile[piece.profile.length - 1].z, S = surfaceLength(piece);
-  const lowest = base + clay + FOOT + END_CLEARANCE + FLOOR_GAP;
+  const base = piece.profile[0].z, S = surfaceLength(piece);
+  const lowest = base + clay + HEAD + FLOOR_AIR + FOOT + END_CLEARANCE;
   // The reach moves the roller's two ends along the pot's surface, and the pot's floor and rim stop them.
   const s0 = Math.max(0, band.start - (o.below ?? 0)), s1 = Math.min(S, band.start + band.slant + (o.above ?? 0)), span = Math.max(0, s1 - s0);
   const n = Math.max(2, Math.ceil(span / 0.5));
@@ -62,22 +58,10 @@ export function fitSupport(piece: Piece, band: { start: number; slant: number },
   let opening = Infinity;
   for (let s = from; s <= S; s += 1) opening = Math.min(opening, 2 * innerAt(piece, s, clay).r);
   opening = Math.min(opening, 2 * innerAt(piece, S, clay).r);
-  // The frame crosses the pot, so the roller can be as wide as the opening less the frame's other parts and some air.
-  const given = o.diameter && o.diameter > 0 ? Math.max(MIN_D, o.diameter) : 0, around = frameSpan(0, bore) + SIDE_GAP;
-  const needs = frameSpan(given || MIN_D, bore) + SIDE_GAP, want = given || Math.min(opening / 2, opening - around, MAX_D);
-  let length = 0;
-  for (let i = 1; i < wall.length; i++) length += Math.hypot(wall[i].r - wall[i - 1].r, wall[i].z - wall[i - 1].z);
-  const none: SupportFit = { state: 'short', opening, needs, outline: { t: [], r: [] }, diameter: 0, minD: 0, maxD: 0, axial: 0, length, slip: 0, fromZ: 0, toZ: 0, reach: 0 };
-  if (length < MIN_LENGTH) return none;
-  if (want < MIN_D || needs > opening) return { ...none, state: 'narrow' };
-  const meanR = wall.reduce((a, p) => a + p.r, 0) / wall.length;
-  const fit = fitRoller(wall, [0, wall.length - 1], (2 * meanR) / want, -1), minD = 2 * Math.min(...fit.r), maxD = 2 * Math.max(...fit.r);
-  // A bellied pot makes the roller wider in places than its mean, and the frame has to clear the widest part.
-  const tight = frameSpan(maxD, bore) + SIDE_GAP;
-  if (minD < MIN_D - 1e-6 || tight > opening) return { ...none, state: 'narrow', needs: Math.max(needs, tight) };
-  const toZ = wall[wall.length - 1].z;
-  return {
-    state: 'ok', opening, needs, outline: { t: fit.t, r: fit.r }, diameter: (2 * fit.r.reduce((a, v) => a + v, 0)) / fit.r.length, minD, maxD,
-    axial: fit.t[fit.t.length - 1], length, slip: fit.slip, fromZ: wall[0].z, toZ, reach: Math.max(0, rim - (toZ + END_CLEARANCE + side)),
-  };
+  const given = o.diameter && o.diameter > 0 ? Math.max(MIN_D, o.diameter) : 0, around = innerSpan(0, bore) + OPEN + AIR;
+  const needs = innerSpan((given || MIN_D) / 2, bore) + OPEN + AIR, want = given || Math.min(opening / 2, opening - around, MAX_D);
+  const length = wall.length ? wall[wall.length - 1].z - wall[0].z : 0, none = { opening, needs, diameter: 0, length, fromZ: 0, toZ: 0 };
+  if (length < MIN_LENGTH) return { state: 'short', ...none };
+  if (want < MIN_D || needs > opening) return { state: 'narrow', ...none };
+  return { state: 'ok', opening, needs, diameter: want, length, fromZ: wall[0].z, toZ: wall[wall.length - 1].z };
 }

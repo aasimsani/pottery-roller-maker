@@ -15,7 +15,7 @@ ctx.onmessage = ({ data: { id, s, prepared } }) => {
     // Hand the big arrays back without copying them.
     const arrays = [result.mask.solid, result.mask.inside, result.mask.frame, result.thinRelief, result.thinGaps];
     ctx.postMessage({ id, result }, [...arrays.map((a) => a.buffer as ArrayBuffer), result.stl, ...(result.handle ? [result.handle.stl, result.handle.axleStl] : []),
-      ...(result.support ? [result.support.stl, result.support.frameStl, result.support.axleStl] : [])]);
+      ...(result.support ? [result.support.stl, result.support.yokeStl, result.support.sliderStl, result.support.outerAxleStl, result.support.innerAxleStl, result.support.pinStl] : [])]);
   } catch (e) {
     ctx.postMessage({ id, error: e instanceof Error ? e.message : String(e) });
   }

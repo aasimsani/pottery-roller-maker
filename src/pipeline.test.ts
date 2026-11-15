@@ -131,15 +131,19 @@ describe('tightenPx', () => {
 
 describe('inside support', () => {
   const stlOk = (stl: ArrayBuffer) => expect(new DataView(stl).getUint32(80, true)).toBe((stl.byteLength - 84) / 50);
-  it('comes as a smooth roller, a frame and an axle, each its own STL', () => {
+  it('comes as a smooth roller and a caliper: a yoke, a slider, two axles and a pin, each its own STL', () => {
     const r = computeRoller({ ...s, support: true }, [newLinesLayer()], new Map());
     expect(r.support).toBeDefined();
-    for (const stl of [r.support!.stl, r.support!.frameStl, r.support!.axleStl]) stlOk(stl);
+    const x = r.support!;
+    for (const stl of [x.stl, x.yokeStl, x.sliderStl, x.outerAxleStl, x.innerAxleStl, x.pinStl]) stlOk(stl);
     // The mug is 80 mm outside and the clay is 6 mm thick, so the inside is 68 mm and the roller takes half of it.
-    expect(r.support!.minD).toBeCloseTo(34);
-    expect(r.support!.maxD).toBeCloseTo(34);
-    expect(r.support!.length).toBeCloseTo(50);
+    expect(x.diameter).toBeCloseTo(34);
+    expect(x.length).toBeCloseTo(50);
     expect(r.checks.map((c) => c.id)).toEqual([]);
+  });
+  it('replaces the separate handle, because the yoke carries the texture roller and the grip', () => {
+    expect(computeRoller({ ...s, support: true, handle: true }, [newLinesLayer()], new Map()).handle).toBeUndefined();
+    expect(computeRoller({ ...s, support: false, handle: true }, [newLinesLayer()], new Map()).handle).toBeDefined();
   });
   it('is left out when it is off, and warns when the pot can\'t take one', () => {
     expect(computeRoller(s, [newLinesLayer()], new Map()).support).toBeUndefined();
@@ -148,23 +152,30 @@ describe('inside support', () => {
     expect(ids({ bedW: 100, bedD: 100, handle: false })).toContain('support-bed');
     expect(ids({ piece: { name: 'Bottle', profile: [{ z: 0, d: 90 }, { z: 100, d: 90 }, { z: 130, d: 40 }] } })).toContain('support-narrow');
   });
-  it('lengthens the grip when the band sits deep in a tall pot, so the grip still clears the rim', () => {
+  it('holds the beam above the rim of a tall pot, and the yoke grows with it', () => {
     const tall = { name: 'Vase', profile: [{ z: 0, d: 100 }, { z: 200, d: 100 }] };
-    const deep = computeRoller({ ...s, piece: tall, support: true, bandFrom: 70, bandTo: 130 }, [newLinesLayer()], new Map());
-    const high = computeRoller({ ...s, piece: tall, support: true, bandFrom: 130, bandTo: 190 }, [newLinesLayer()], new Map());
-    expect(deep.support!.size[0]).toBeGreaterThan(high.support!.size[0] + 50);
+    const vase = computeRoller({ ...s, piece: tall, support: true, bandFrom: 70, bandTo: 130 }, [newLinesLayer()], new Map()).support!;
+    const mugOnly = computeRoller({ ...s, support: true }, [newLinesLayer()], new Map()).support!;
+    expect(vase.beamBottom).toBeGreaterThanOrEqual(204);
+    expect(vase.size[0]).toBeGreaterThan(mugOnly.size[0] + 40);
   });
   it('follows the diameter and the reach it is given', () => {
     const base = computeRoller({ ...s, support: true }, [newLinesLayer()], new Map()).support!;
-    const adjusted = computeRoller({ ...s, support: true, supportD: 26, supportBelow: 5, supportAbove: 10 }, [newLinesLayer()], new Map()).support!;
-    expect(adjusted.minD).toBeCloseTo(26);
-    expect(adjusted.length).toBeCloseTo(base.length + 15);
-    expect(adjusted.fromZ).toBeCloseTo(base.fromZ - 5);
+    const adjusted = computeRoller({ ...s, support: true, supportD: 26, supportBelow: 3, supportAbove: 10 }, [newLinesLayer()], new Map()).support!;
+    expect(adjusted.diameter).toBeCloseTo(26);
+    expect(adjusted.length).toBeCloseTo(base.length + 13);
+    expect(adjusted.fromZ).toBeCloseTo(base.fromZ - 3);
     expect(adjusted.toZ).toBeCloseTo(base.toZ + 10);
   });
   it('warns when the diameter it is given won\'t pass the pot\'s mouth', () => {
     const r = computeRoller({ ...s, support: true, supportD: 60 }, [newLinesLayer()], new Map());
     expect(r.support).toBeUndefined();
     expect(r.checks.map((c) => c.id)).toContain('support-narrow');
+  });
+  it('warns when a cone-shaped texture roller won\'t sit parallel to the smooth one', () => {
+    const flared = { name: 'Flared', profile: [{ z: 0, d: 70 }, { z: 95, d: 90 }] };
+    const r = computeRoller({ ...s, piece: flared, shape: 'pot', support: true }, [newLinesLayer()], new Map());
+    expect(r.checks.map((c) => c.id)).toContain('support-shaped');
+    expect(r.support).toBeUndefined();
   });
 });

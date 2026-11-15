@@ -6,7 +6,7 @@ import { geometry } from './core/geometry';
 import type { WorkerReply, WorkerRequest } from './roller.worker';
 import { artHistogram, loadArt, refKey, type Art } from './render/art';
 import { otsuThreshold } from './core/threshold';
-import { exportName, plateParts, supportPlateParts } from './export';
+import { exportName, plateParts } from './export';
 import { svgDataUrl, type DesignRef } from './sources/types';
 import { fetchIconSvg, iconSvgThumb } from './sources/iconify';
 import { Controls } from './ui/Controls';
@@ -139,9 +139,7 @@ export function App() {
     if (zip) download(new Blob([zip as BlobPart], { type: 'model/3mf' }), name);
     else for (const p of parts) download(new Blob([p.stl], { type: 'model/stl' }), `${p.name}.stl`);
   };
-  const onAll = () => { if (result) void savePlate(plateParts(baseName, result), `${baseName}_${result.support ? 'all-parts' : 'with-handle'}.3mf`); };
-  // The inside support also downloads alone, for a roller that is already printed.
-  const onSupport = () => { if (result) void savePlate(supportPlateParts(baseName, result), `${baseName}_inside-support.3mf`); };
+  const onAll = () => { if (result) void savePlate(plateParts(baseName, result), `${baseName}_${result.support ? 'with-caliper' : 'with-handle'}.3mf`); };
   // A traced piece gets a band over its middle 80%, ready to adjust.
   const usePhotoPiece = (piece: Piece) => {
     const S = surfaceLength(piece);
@@ -179,7 +177,7 @@ export function App() {
       <div className="app">
         <Controls s={s} set={set} result={result} onPhoto={() => setPhotoOpen(true)} onScale={onScale} />
         <main>
-          <Preview s={s} result={result} error={error || unsaved} loading={loading} updating={updating} onPaint={(c) => set('paintColor', c)} onFix={(k, v) => set(k, v as never)} onSet={set} onStl={onStl} onAll={onAll} onSupport={onSupport} onAddToPlate={onAddToPlate} onPng={onPng} />
+          <Preview s={s} result={result} error={error || unsaved} loading={loading} updating={updating} onPaint={(c) => set('paintColor', c)} onFix={(k, v) => set(k, v as never)} onSet={set} onStl={onStl} onAll={onAll} onAddToPlate={onAddToPlate} onPng={onPng} />
           <PlatePanel plate={plate} bedW={s.bedW} bedD={s.bedD} onRemove={(i) => setPlate((p) => p.filter((_, k) => k !== i))}
             onClear={() => setPlate([])} onDownload={(zip, name) => download(new Blob([zip as BlobPart], { type: 'model/3mf' }), name)} />
           <LayersPanel layers={layers} setLayers={setLayers} info={result?.layerInfo ?? new Map()} errors={artErrors} onAutoThreshold={autoThreshold} onAddDesign={() => setLibraryOpen(true)} />

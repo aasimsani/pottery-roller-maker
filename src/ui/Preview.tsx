@@ -22,8 +22,6 @@ interface Props {
   onStl: () => void;
   /** Downloads the roller with its handle and axle, on one 3MF plate. */
   onAll: () => void;
-  /** Downloads the inside support's roller, frame and axle, on one 3MF plate. */
-  onSupport: () => void;
   /** Adds the exact STL that Download STL saves to the plate. */
   onAddToPlate: () => void;
   onPng: (canvas: HTMLCanvasElement) => void;
@@ -40,7 +38,7 @@ function describe(r: RollerResult, s: Settings): string {
   return `A roller ${r.roller.diameter.toFixed(0)} mm across and ${r.roller.length.toFixed(0)} mm long for ${s.piece.name}, ${errors ? `${errors} print check error${errors > 1 ? 's' : ''}` : 'passing the print check'}.`;
 }
 
-export function Preview({ s, result, error, loading, updating, onStl, onAll, onSupport, onAddToPlate, onPng, onPaint, onFix, onSet }: Props) {
+export function Preview({ s, result, error, loading, updating, onStl, onAll, onAddToPlate, onPng, onPaint, onFix, onSet }: Props) {
   const flat = useRef<HTMLCanvasElement>(null), dialog = useRef<HTMLDivElement>(null);
   const [mode, setMode] = useState<PieceMode>('painted');
   const [expanded, setExpanded] = useState(false);
@@ -64,7 +62,7 @@ export function Preview({ s, result, error, loading, updating, onStl, onAll, onS
   const fits = !!r && !r.checks.some((c) => c.id === 'bed');
   // The print view rebuilds its scene when its parts change, so the list keeps one identity per result.
   const extras = useMemo(() => {
-    const more = [...(r?.handle ? [r.handle.stl, r.handle.axleStl] : []), ...(r?.support ? [r.support.stl, r.support.frameStl, r.support.axleStl] : [])];
+    const more = [...(r?.handle ? [r.handle.stl, r.handle.axleStl] : []), ...(r?.support ? [r.support.stl, r.support.yokeStl, r.support.sliderStl, r.support.outerAxleStl, r.support.innerAxleStl, r.support.pinStl] : [])];
     return more.length ? more : undefined;
   }, [r]);
   const view = (className: string) => (
@@ -73,7 +71,7 @@ export function Preview({ s, result, error, loading, updating, onStl, onAll, onS
         ? <Piece3D s={s} result={r!} className={className} label={`3D view of ${s.piece.name} after rolling. ${label}`} />
         : mode === 'roller'
           ? <PrintView stl={r!.stl} bedW={s.bedW} bedD={s.bedD} lying className={className} label={`3D view of the roller. ${label}`} />
-          : fits ? <PrintView stl={r!.stl} extras={extras} bedW={s.bedW} bedD={s.bedD} className={className} label={`Print file on the bed${r!.handle ? ', with the handle and the axle' : ''}${r!.support ? ', with the inside support' : ''}: ${label}`} />
+          : fits ? <PrintView stl={r!.stl} extras={extras} bedW={s.bedW} bedD={s.bedD} className={className} label={`Print file on the bed${r!.handle ? ', with the handle and the axle' : ''}${r!.support ? ', with the caliper' : ''}: ${label}`} />
             : <div className={`${className} loading`}>No print file: it doesn't fit the bed.</div>}
     </Suspense>
   );
@@ -139,7 +137,7 @@ export function Preview({ s, result, error, loading, updating, onStl, onAll, onS
             <span>{fits ? 'fits the bed standing up' : 'too big for the bed'}</span>
             <span>{s.depth} mm relief, about {Math.round(r.grams)} g PETG</span>
             {r.handle && <span>Handle <b>{r.handle.size[0].toFixed(0)} × {r.handle.size[1].toFixed(0)} mm</b>, prints flat</span>}
-            {r.support && <span>Inside support <b>Ø{r.support.minD.toFixed(0)} × {r.support.length.toFixed(0)} mm</b>, about {Math.round(r.support.grams)} g more</span>}
+            {r.support && <span>Caliper <b>{r.support.size[0].toFixed(0)} × {r.support.size[1].toFixed(0)} mm</b> yoke, smooth roller <b>Ø{r.support.diameter.toFixed(0)} × {r.support.length.toFixed(0)} mm</b>, about {Math.round(r.support.grams)} g more</span>}
           </>
         )}
       </p>
@@ -194,9 +192,8 @@ export function Preview({ s, result, error, loading, updating, onStl, onAll, onS
       <div className="actions">
         <button onClick={onStl} disabled={!r || !fits || blocked} title={blocked ? 'Fix the print check errors first' : undefined}>Download STL</button>
         {blocked && fits && <button className="secondary" onClick={onStl}>Download anyway</button>}
-        {(r?.handle || r?.support) && <button className="secondary" onClick={onAll} disabled={!fits || blocked}>{r.support ? 'Download every part (.3mf)' : 'Download roller + handle (.3mf)'}</button>}
-        {r?.support && <button className="secondary" onClick={onSupport}>Download inside support (.3mf)</button>}
-        <button className="secondary" onClick={onAddToPlate} disabled={!r || !fits || blocked}>{r?.support ? 'Add every part to plate' : r?.handle ? 'Add roller + handle to plate' : 'Add to plate'}</button>
+        {(r?.handle || r?.support) && <button className="secondary" onClick={onAll} disabled={!fits || blocked}>{r.support ? 'Download roller + caliper (.3mf)' : 'Download roller + handle (.3mf)'}</button>}
+        <button className="secondary" onClick={onAddToPlate} disabled={!r || !fits || blocked}>{r?.support ? 'Add roller + caliper to plate' : r?.handle ? 'Add roller + handle to plate' : 'Add to plate'}</button>
         <button className="secondary" onClick={() => flat.current && onPng(flat.current)} disabled={!r}>Download flat PNG</button>
       </div>
 
@@ -223,7 +220,7 @@ export function Preview({ s, result, error, loading, updating, onStl, onAll, onS
           <li><b>Fine lines:</b> a 0.2 mm nozzle keeps them crisp. With a 0.4 mm nozzle, keep raised lines and gaps at least 0.8 mm wide.</li>
           <li><b>PETG or PLA:</b> both work. PLA strings less and gives crisper relief, and PETG takes knocks in the studio better.</li>
           <li><b>Handle:</b> turn on <b>Print a handle</b> under Handle, then use <b>Download roller + handle</b>. The handle prints flat, and the axle prints standing on its head. Push the axle through one arm, the roller and the other arm. An 8 mm dowel works instead of the printed axle.</li>
-          <li><b>Soft clay:</b> turn on <b>Inside support</b> and print its smooth roller, frame and axle. Push the axle through the frame's thick arm, the roller and the thin foot. Lower the foot end into the pot, press the smooth roller against the inside of the wall, and roll the texture roller on the outside, opposite it. Turn the pot, or walk both rollers round it together.</li>
+          <li><b>Soft clay:</b> turn on <b>Inside support</b> and print the caliper: the yoke, the slider, two axles and the pin, with a smooth roller. Push each axle in from the bottom through its roller. Slide the slider to its widest pin position, lower the tool over the rim so the texture roller is outside and the smooth roller inside, then slide it closed on the wall and push the pin through. Hold the grip and walk the tool round the pot.</li>
           <li><b>Curved or tapered pots:</b> set <b>Shape</b> to <b>shaped to the pot</b> under Roller. The roller's side then follows the wall, so it touches along the whole band. Hold the end that printed on the bed toward the pot's base.</li>
           <li><b>Texture:</b> roll soft, leather-firm clay. Dust the roller with cornstarch, or mist the clay, so it doesn't stick.</li>
           <li><b>Underglaze:</b> load the raised tops thinly with a sponge or brayer, then roll once onto leather-hard clay with light, even pressure.</li>
