@@ -9,6 +9,7 @@ import { searchIconify } from '../sources/iconify';
 import { capture3d } from '../ui/scene';
 import { plate3mf } from '../core/plate';
 import { setViewMode } from './viewMode';
+import { shrinkImage } from '../render/shrink';
 import { listSpots, thinOnRoller } from '../core/fix';
 import { coverageGrid, printsMask, renderSight, type Region } from './sight';
 import type { RollerBrief } from './prompts';
@@ -45,12 +46,15 @@ const trimLayer = ({ ref, ...l }: Layer) => ({ ...l, ...(ref ? { design: { sourc
 const checkpoints = new Map<string, { state: DesignState; image?: string }>();
 const found = new Map<string, DesignRef>();
 
+// A shaped roller's outline is hundreds of numbers that Claude never reads, so replies leave it out.
+const withoutOutline = ({ outline: _outline, ...roller }: RollerResult['roller']) => roller;
+
 export function makeHandlers(api: TabApi): Record<string, Handler> {
   const summary = () => {
     const { s, layers, result: r, error } = api.get();
     return {
       ...(error ? { error } : {}),
-      roller: r?.roller, grams: r && Math.round(r.grams), otherBuildGrams: r && Math.round(r.otherGrams), build: s.build.kind,
+      roller: r && withoutOutline(r.roller), grams: r && Math.round(r.grams), otherBuildGrams: r && Math.round(r.otherGrams), build: s.build.kind,
       checks: r?.checks ?? [], fixed: r?.fixed,
       layers: layers.map((l) => ({ id: l.id, name: l.name, kind: l.kind, visible: l.visible, repeatsRoundPot: r?.layerInfo.get(l.id)?.repeats })),
     };
@@ -118,7 +122,7 @@ export function makeHandlers(api: TabApi): Record<string, Handler> {
   };
 
   // resolve() turns the bridge-only ops, which name a library design or an image, into layer ops.
-  const resolve = (o: Record<string, unknown>): Op => {
+  const resolve = async (o: Record<string, unknown>): Promise<Op> => {
     if (o.op === 'addDesign') {
       const ref = found.get(`${o.source}:${o.id}`) ?? (o.source === 'builtin' ? builtinRef(String(o.id)) : undefined);
       if (!ref) throw new OpError(`Search with search_library first, so the tab knows the design ${o.source}:${o.id}.`);
@@ -127,7 +131,8 @@ export function makeHandlers(api: TabApi): Record<string, Handler> {
     if (o.op === 'addImage') {
       const url = String(o.url ?? ''), name = String(o.name ?? 'Image');
       if (!/^(https:|data:image\/)/.test(url)) throw new OpError('An image URL must start with https: or data:image/.');
-      return { op: 'addLayer', kind: 'design', ref: { source: 'upload', id: `${name}-${Date.now()}`, title: name, thumb: url, data: url, credit: { source: 'Your image', license: 'your own' } } };
+      const { data, thumb } = await shrinkImage(url);
+      return { op: 'addLayer', kind: 'design', ref: { source: 'upload', id: `${name}-${Date.now()}`, title: name, thumb, data, credit: { source: 'Your image', license: 'your own' } } };
     }
     return o as Op;
   };
@@ -147,7 +152,7 @@ export function makeHandlers(api: TabApi): Record<string, Handler> {
     view: async (p: ViewArgs) => view(p),
     apply: async ({ ops, view: wantView }: { ops: Record<string, unknown>[]; view?: boolean }) => {
       const { s, layers, result } = api.get();
-      return commitAndWait(applyOps({ settings: s, layers }, ops.map(resolve), { checks: result?.checks ?? [] }), wantView);
+      return commitAndWait(applyOps({ settings: s, layers }, await Promise.all(ops.map(resolve)), { checks: result?.checks ?? [] }), wantView);
     },
     searchLibrary: async ({ source, query = '' }: { source: string; query?: string }) => {
       const page = source === 'builtin' ? searchBuiltin(query)

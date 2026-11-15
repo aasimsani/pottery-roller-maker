@@ -132,6 +132,11 @@ export function prepareRoller(s: Settings, layers: Layer[], arts: Map<string, Ar
   return { gp, maskLayers, layerInfo, band, roller };
 }
 
+// tightenPx() raises a minimum width, in pixels, by the share a shaped roller's thinnest part narrows the pattern. It
+// moves in whole pixels, because the check measures widths in pixels. A smaller change is below what it can see, and
+// passing it on would reject every line that sits exactly at the minimum.
+export const tightenPx = (px: number, ratio: number) => px + Math.round(px * (ratio - 1));
+
 // finishRoller() builds the pattern, raises it into a drum, and checks it. It touches no DOM,
 // so it can run in a Web Worker and keep the page responsive while you type.
 export function finishRoller(s: Settings, { gp, maskLayers, layerInfo, band, roller }: Prepared): RollerResult {
@@ -139,7 +144,7 @@ export function finishRoller(s: Settings, { gp, maskLayers, layerInfo, band, rol
   // part. The print check allows for that by asking for wider lines and gaps everywhere.
   // ponytail: that is stricter than the wide parts need. Scale each row by its own diameter if it ever rejects too much.
   const tight = roller.diameter / roller.minD;
-  const g = geometry(gp), mask = buildMask(g, maskLayers), n = mask.w * mask.h, linePx = (s.minPlastic / s.res) * tight, gapPx = (s.minHole / s.res) * tight;
+  const g = geometry(gp), mask = buildMask(g, maskLayers), n = mask.w * mask.h, linePx = tightenPx(s.minPlastic / s.res, tight), gapPx = tightenPx(s.minHole / s.res, tight);
   const drawn = new Uint8Array(n);
   for (let k = 0; k < n; k++) drawn[k] = mask.inside[k] && !mask.solid[k] ? 1 : 0;
   const at = (f: { u: number; v: number }) => ({ x: f.u * mask.w, y: f.v * mask.h });

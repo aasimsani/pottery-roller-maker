@@ -6,6 +6,7 @@ import { searchCommons, type CommonsKind } from '../sources/commons';
 import { searchSmithsonian, SMITHSONIAN_KEY_URL } from '../sources/smithsonian';
 import { refKey } from '../render/art';
 import { usePersistent } from '../state';
+import { shrinkImage } from '../render/shrink';
 
 type Tab = 'builtin' | 'iconify' | 'commons' | 'smithsonian' | 'patterns' | 'upload';
 
@@ -101,9 +102,11 @@ export function Library({ inMix, onAdd }: { inMix: Set<string>; onAdd: (ref: Des
       if (!file.type.startsWith('image/')) continue;
       const reader = new FileReader();
       reader.onload = () => {
-        const url = String(reader.result);
-        onAdd({ source: 'upload', id: `${file.name}-${Date.now()}`, title: file.name, thumb: url, data: url, credit: { source: 'Your image', license: 'your own' } });
-        setUploaded((n) => n + 1);
+        // A big image is redrawn smaller first, so the browser can save it with the design.
+        void shrinkImage(String(reader.result)).then(({ data, thumb }) => {
+          onAdd({ source: 'upload', id: `${file.name}-${Date.now()}`, title: file.name, thumb, data, credit: { source: 'Your image', license: 'your own' } });
+          setUploaded((n) => n + 1);
+        });
       };
       reader.readAsDataURL(file);
     }
