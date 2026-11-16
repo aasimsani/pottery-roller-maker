@@ -7,7 +7,7 @@ import { applyOps, OpError, type DesignState, type Op } from './ops';
 import { builtinRef, searchBuiltin } from '../sources/builtin';
 import { searchIconify } from '../sources/iconify';
 import { capture3d } from '../ui/scene';
-import { plate3mf } from '../core/plate';
+import { plate3mf, splitPlates } from '../core/plate';
 import { plateParts } from '../export';
 import { setViewMode } from './viewMode';
 import { shrinkImage } from '../render/shrink';
@@ -193,9 +193,15 @@ export function makeHandlers(api: TabApi): Record<string, Handler> {
       if (format === 'stl') blob = new Blob([result.stl.slice(0)], { type: 'model/stl' });
       else if (format === '3mf') {
         // The plate carries the handle, the axle and the inside support too, when they are on.
-        const zip = await plate3mf(plateParts(name, result), s.bedW, s.bedD);
-        if (!zip) throw new Error('The roller and its other parts don\'t fit on one plate. Shorten the grip, or export the STL.');
-        blob = new Blob([zip as BlobPart], { type: 'model/3mf' });
+        // Parts that overflow one bed go on more plates, and each plate downloads as its own file.
+        const groups = splitPlates(plateParts(name, result), s.bedW, s.bedD), files: string[] = [];
+        for (const [k, group] of groups.entries()) {
+          const zip = await plate3mf(group, s.bedW, s.bedD);
+          if (!zip) throw new Error('A part is bigger than the bed. Shorten the grip, or export the STL.');
+          const file = groups.length > 1 ? `${name}_plate-${k + 1}.3mf` : `${name}.3mf`;
+          api.download(new Blob([zip as BlobPart], { type: 'model/3mf' }), file); files.push(file);
+        }
+        return { files, savedTo: 'the browser\'s downloads folder' };
       }
       else blob = await new Promise<Blob>((ok, fail) => flatCanvas()?.toBlob((b) => (b ? ok(b) : fail(new Error('No flat preview.')))) ?? fail(new Error('No flat preview.')));
       api.download(blob, `${name}.${format}`);

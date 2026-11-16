@@ -19,13 +19,15 @@ design library, and layers.
    filament that each build uses.
 6. **Add a handle.** Under **Handle**, keep **Print a handle and an axle** on, and set the grip length. The handle prints
    flat, and the axle prints standing on its head. An 8 mm dowel works instead of the printed axle.
-   For soft clay, turn on **Inside support** and set the clay wall's thickness. It adds a smooth roller on a frame that
-   goes inside the pot. Hold it against the inside of the wall, opposite the texture roller, so the wall can't give way.
-   Set its diameter, and how far it reaches past the band at either end, to suit the pot. The app picks the widest roller
-   that fits through the pot's mouth when the diameter is 0.
+   For soft clay, turn on **Inside support** and set the clay wall's thickness. It prints a caliper: one yoke holds the
+   texture roller outside the wall, and a slider on a rail over the rim holds a smooth roller inside it, so one hand on
+   the grip holds both rollers on the wall. The slider locks with a printed pin at positions 2.5 mm apart. Open it to
+   lower the tool over the rim, then close it on the wall. The caliper replaces the separate handle, so its rollers have
+   parallel axles and suit a straight wall. Set the smooth roller's diameter, and how far it reaches past the band, to
+   suit the pot. The app picks the widest roller that fits through the pot's mouth when the diameter is 0.
 7. **Check the roller.** Fix every error that the **Print check** marks.
 8. **Download it.** **Download roller + handle (.3mf)** puts the roller, the handle and the axle on one plate.
-   **Download STL** saves the roller alone, and **Download inside support (.3mf)** saves the support's three parts.
+   **Download STL** saves the roller alone, and With the inside support on, the download is **Download roller + caliper (.3mf)**, on as many plates as the parts need.
 
 A straight roller rolls cleanly only on a straight wall. The print check warns you when the band tapers or bows, and
 it offers **Shape the roller to the pot**. A shaped roller's side follows the pot's wall, so it touches along the whole

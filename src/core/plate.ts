@@ -24,6 +24,18 @@ export function packPlate(sizes: [number, number][], bedW: number, bedD: number,
   return at.map(([px, py]) => [px + ox, py + oy]);
 }
 
+// splitPlates() groups parts into plates that each fit the bed. It places the largest footprint first and puts each part
+// on the first plate that still has room, so a part that fits nowhere starts a plate of its own.
+export function splitPlates(parts: PlatePart[], bedW: number, bedD: number, gap = 10): PlatePart[][] {
+  const sized = parts.map((p) => ({ p, s: stlSize(p.stl) })).sort((a, b) => b.s[0] * b.s[1] - a.s[0] * a.s[1]);
+  const groups: typeof sized[] = [];
+  for (const q of sized) {
+    const g = groups.find((on) => packPlate([...on, q].map((x): [number, number] => [x.s[0], x.s[1]]), bedW, bedD, gap));
+    if (g) g.push(q); else groups.push([q]);
+  }
+  return groups.map((g) => g.map((x) => x.p));
+}
+
 /** A binary STL's width, depth, and height in mm, read from its corners. */
 export function stlSize(stl: ArrayBuffer): [number, number, number] {
   const dv = new DataView(stl), n = dv.getUint32(80, true);

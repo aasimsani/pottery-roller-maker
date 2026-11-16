@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { crc32, packPlate, plate3mf, stlMesh, stlSize } from './plate';
+import { crc32, packPlate, plate3mf, splitPlates, stlMesh, stlSize } from './plate';
 import { meshSTL } from './mesh';
 
 // A 20 × 10 px sheet at 0.5 mm per pixel (10 × 5 mm), 0.6 mm thick, with one hole.
@@ -86,3 +86,16 @@ describe('plate3mf', () => {
 test('crc32 matches the standard check value', () => {
   expect(crc32(new TextEncoder().encode('123456789'))).toBe(0xcbf43926);
 });
+
+describe('splitPlates', () => {
+  // A sheet of w × h mm, at 0.5 mm per pixel.
+  const part = (name: string, w: number, h: number) => ({ name, stl: meshSTL(new Uint8Array(4 * w * h).fill(1), 2 * w, 2 * h, 0.5, 0.6) });
+  test('keeps everything on one plate when it all fits', () => {
+    expect(splitPlates([part('a', 100, 100), part('b', 50, 50)], 256, 256).map((g) => g.map((p) => p.name))).toEqual([['a', 'b']]);
+  });
+  test('starts a second plate for a part that no longer fits, largest part first', () => {
+    const groups = splitPlates([part('small', 100, 100), part('big', 200, 200)], 256, 256);
+    expect(groups.map((g) => g.map((p) => p.name))).toEqual([['big'], ['small']]);
+  });
+});
+

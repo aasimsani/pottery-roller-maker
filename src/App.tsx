@@ -20,7 +20,7 @@ import { PlatePanel } from './ui/PlatePanel';
 import { Drawer } from './ui/Drawer';
 import { ConnectClaude } from './ui/ConnectClaude';
 import { makeHandlers } from './mcp/tab';
-import { plate3mf, type PlatePart } from './core/plate';
+import { plate3mf, splitPlates, type PlatePart } from './core/plate';
 
 const download = (blob: Blob, name: string) => {
   const a = document.createElement('a');
@@ -133,11 +133,14 @@ export function App() {
   const onStl = () => { if (result) download(new Blob([result.stl.slice(0)], { type: 'model/stl' }), `${baseName}.stl`); };
   // With the handle on, the roller travels with its handle and axle, so one plate prints the whole tool.
   const onAddToPlate = () => { if (result) setPlate((p) => [...p, ...plateParts(baseName, result)]); };
-  // A plate that doesn't fit the bed falls back to one STL per part.
+  // Parts that don't fit one plate go on as many plates as they need, and a part too big for any plate downloads as an STL.
   const savePlate = async (parts: PlatePart[], name: string) => {
-    const zip = await plate3mf(parts, s.bedW, s.bedD);
-    if (zip) download(new Blob([zip as BlobPart], { type: 'model/3mf' }), name);
-    else for (const p of parts) download(new Blob([p.stl], { type: 'model/stl' }), `${p.name}.stl`);
+    const groups = splitPlates(parts, s.bedW, s.bedD);
+    for (const [k, group] of groups.entries()) {
+      const zip = await plate3mf(group, s.bedW, s.bedD);
+      if (zip) download(new Blob([zip as BlobPart], { type: 'model/3mf' }), groups.length > 1 ? name.replace(/\.3mf$/, `_plate-${k + 1}.3mf`) : name);
+      else for (const p of group) download(new Blob([p.stl], { type: 'model/stl' }), `${p.name}.stl`);
+    }
   };
   const onAll = () => { if (result) void savePlate(plateParts(baseName, result), `${baseName}_${result.support ? 'with-caliper' : 'with-handle'}.3mf`); };
   // A traced piece gets a band over its middle 80%, ready to adjust.
