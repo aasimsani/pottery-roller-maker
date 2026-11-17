@@ -33,6 +33,8 @@ export interface Settings {
   clay: number;
   /** The support roller's diameter, and how far it reaches past the band below and above, in mm. A diameter of 0 lets the app pick the widest one that fits, up to 45 mm. A negative reach falls short of the band. */
   supportD: number; supportBelow: number; supportAbove: number;
+  /** The width of the support's inner arm across the wall, in mm. A thinner arm passes a narrower mouth and is weaker. */
+  supportArm: number;
   /** Raster pixel size for the pattern, and the drum mesh's spacing, in mm. */
   res: number; cell: number;
   // Printer (Bambu Lab P2S defaults)
@@ -59,7 +61,7 @@ export const DEFAULTS: Settings = {
   bandFrom: 15, bandTo: 80, ends: 4,
   laps: 2, use: 'texture', shape: 'straight', depth: 1.2, soften: 0.3, mirror: true, bore: 8.2,
   build: { kind: 'hollow', wall: 2, spokes: 6, spokeW: 3, hub: 3, plate: 6, infill: 0.15 },
-  handle: true, grip: 90, support: false, clay: 6, supportD: 0, supportBelow: 0, supportAbove: 0,
+  handle: true, grip: 90, support: false, clay: 6, supportD: 0, supportBelow: 0, supportAbove: 0, supportArm: 8,
   res: 0.15, cell: 0.4,
   bedW: 256, bedD: 256, bedH: 256,
   nozzle: 0.4, minPlastic: 0.8, minHole: 0.8, strict: true, fixLines: 'off', fixGaps: 'off', fixLinesBy: 0, fixGapsBy: 0, spotFixes: [],

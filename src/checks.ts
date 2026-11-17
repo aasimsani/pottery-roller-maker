@@ -76,7 +76,7 @@ export function rollerChecks(i: RollerCheckInput): Check[] {
   add(i.support !== 'flat', 'support-flat', 'warn', 'A plate or a dish lies on the table, which already backs it up. Turn the inside support off.');
   add(i.support !== 'no-bore', 'support-bore', 'warn', 'The inside support needs an axle hole. Set the axle hole above 0, or turn the inside support off.');
   add(i.support !== 'narrow', 'support-narrow', 'warn',
-    `The pot is ${i.supportOpening.toFixed(0)} mm wide inside at its narrowest, and the caliper needs ${i.supportNeeds.toFixed(0)} mm to get in with its rollers open. Set a thinner support roller, back the wall up by hand, or turn the inside support off.`);
+    `The pot is ${i.supportOpening.toFixed(0)} mm wide inside at its narrowest, and the caliper needs ${i.supportNeeds.toFixed(0)} mm to get in with its rollers open. Set a thinner support roller or inner arm, back the wall up by hand, or turn the inside support off.`);
   add(i.support !== 'short', 'support-short', 'warn', 'Too little of the band is left above the pot\u2019s floor for an inside support. Raise the band\u2019s top, or turn the inside support off.');
   add(i.support !== 'shaped', 'support-shaped', 'warn', 'The caliper holds both rollers on parallel axles, so the texture roller has to be a plain cylinder. Set Shape to straight, or turn the inside support off.');
   add(i.support !== 'too-big', 'support-bed', 'warn', 'The caliper\u2019s yoke is bigger than the bed. Shorten the grip, or pick a band nearer the rim.');

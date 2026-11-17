@@ -153,6 +153,8 @@ export function Controls({ s, set, result, onPhoto, onScale }: { s: Settings; se
             <NumberField label="Clay wall thickness" unit="mm" value={s.clay} min={2} max={20} step={0.5} onChange={(v) => set('clay', v)} />
             <NumberField label="Support roller diameter" unit="mm" value={s.supportD} min={0} max={90} step={1} onChange={(v) => set('supportD', v)} />
             <p className="hint">0 lets the app pick the widest roller that leaves the slider room to pass through the pot's mouth, up to 45 mm{result?.support && s.supportD === 0 ? `, which is Ø${result.support.diameter.toFixed(0)} mm here` : ''}. The smallest is 18 mm.</p>
+            <NumberField label="Inner arm width" unit="mm" value={s.supportArm} min={5} max={14} step={0.5} onChange={(v) => set('supportArm', v)} />
+            <p className="hint">The arm that hangs down inside the pot. A thinner arm passes a narrower mouth, so the smooth roller can be wider in a small pot. It is also weaker, so keep it at 8 mm or more unless the pot needs it.</p>
             <NumberField label="Reach below the band" unit="mm" value={s.supportBelow} min={-40} max={40} step={1} onChange={(v) => set('supportBelow', v)} />
             <NumberField label="Reach above the band" unit="mm" value={s.supportAbove} min={-40} max={40} step={1} onChange={(v) => set('supportAbove', v)} />
             <p className="hint">0 makes the smooth roller cover the same stretch of wall as the texture roller. A positive number reaches past the band, and a negative number falls short of it. The floor and the rim stop it.</p>

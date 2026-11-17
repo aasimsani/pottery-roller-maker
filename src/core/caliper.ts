@@ -12,6 +12,8 @@ import { latheMesh, mergeMeshes, type Mesh } from './roller';
 export const FOOT = 6;
 /** Air between the rim and the beam that crosses it, in mm. */
 export const BEAM_CLEAR = 4;
+/** The inner arm's default width across the wall, and the gap between it and the smooth roller, in mm. */
+export const ARM = 8, INNER_GAP = 3;
 /** How far past its working position the slider opens, and how far inside it closes, in mm. */
 export const OPEN = 7.5;
 const CLOSE = 5;
@@ -35,10 +37,12 @@ export interface CaliperSpec {
   /** The rim's height, the wall's thickness, and how far the texture's tips sink into the clay. */
   rim: number; clay: number; sink: number;
   bore: number; grip: number;
+  /** The width of the arm that hangs down inside the pot, across the wall. A thinner arm passes a narrower mouth. */
+  arm: number;
 }
 
 /** How far the slider's far end reaches past the support roller's pressing side, in mm. The pot must be at least this wide inside, with the slider open. */
-export const innerSpan = (innerR: number, bore: number) => 2 * innerR + BACK_GAP + armSide(bore);
+export const innerSpan = (innerR: number, arm: number) => 2 * innerR + INNER_GAP + arm;
 
 export interface Caliper {
   yoke: Mesh; slider: Mesh; outerAxle: Mesh; innerAxle: Mesh; pin: Mesh;
@@ -100,17 +104,17 @@ export function caliperParts(c: CaliperSpec): Caliper {
 
   // The slider: a block for the support roller's axle, a channel that wraps the rail, a bar that hangs down inside the
   // pot, and a foot. The channel's cover plate has a slot at the axle's position for the pin.
-  const lo = gap - CHANNEL / 2, hi = gap + CHANNEL / 2, inner = gap + c.innerR + BACK_GAP, upper = railTop + SLIP, coverZ = RAIL_Z + SLIP;
+  const lo = gap - CHANNEL / 2, hi = gap + CHANNEL / 2, inner = gap + c.innerR + INNER_GAP, upper = railTop + SLIP, coverZ = RAIL_Z + SLIP;
   const slider: Mesh[] = [
     holedBlock(beamBottom, blockTop, side, r, gap),
     box(blockTop - WALL, blockTop, lo, hi, 0, side),
     box(upper, upper + WALL, lo, hi, 0, side),
     box(blockTop - WALL, upper + WALL, lo, gap - PIN_SLOT / 2, coverZ, side),
     box(blockTop - WALL, upper + WALL, gap + PIN_SLOT / 2, hi, coverZ, side),
-    box(beamBottom, blockTop, gap + side / 2 - 0.5, inner + side, 0, side),
-    box(innerBottom, blockTop, inner, inner + side, 0, side),
+    box(beamBottom, blockTop, gap + side / 2 - 0.5, inner + c.arm, 0, side),
+    box(innerBottom, blockTop, inner, inner + c.arm, 0, side),
     holedBlock(innerBottom, innerBottom + FOOT, side, r, gap),
-    box(innerBottom, innerBottom + FOOT, gap + side / 2 - 0.5, inner + side, 0, side),
+    box(innerBottom, innerBottom + FOOT, gap + side / 2 - 0.5, inner + c.arm, 0, side),
   ];
 
   // Each axle stands on its head, and its shaft ends in the blind hole of its top block.

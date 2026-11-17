@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { BEAM_CLEAR, FOOT, OPEN, PIN_SLOT, PIN_W, STEP, caliperParts, innerSpan, type CaliperSpec } from './caliper';
+import { BEAM_CLEAR, FOOT, INNER_GAP, OPEN, PIN_SLOT, PIN_W, STEP, caliperParts, innerSpan, type CaliperSpec } from './caliper';
 import { volume, type Mesh } from './roller';
 import { closed, overhangs } from '../test/meshChecks';
 
 const spec = (o: Partial<CaliperSpec> = {}): CaliperSpec => ({
-  outerR: 20, outerFrom: 11, outerTo: 84, innerR: 17, innerFrom: 15, innerTo: 80, rim: 95, clay: 6, sink: 1.2, bore: 8.2, grip: 90, ...o,
+  outerR: 20, outerFrom: 11, outerTo: 84, innerR: 17, innerFrom: 15, innerTo: 80, rim: 95, clay: 6, sink: 1.2, bore: 8.2, grip: 90, arm: 8, ...o,
 });
 const box = (m: Mesh) => {
   const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
@@ -63,7 +63,7 @@ describe('caliperParts', () => {
   it('leaves the inner bar clear of the pot\'s far wall by the span it reports', () => {
     const s = spec(), c = caliperParts(s), slider = box(c.slider);
     // The roller's pressing side is innerR toward the wall from its axis, and the bar's far edge is the slider's far end.
-    expect(slider.hi[1] - (c.dims.gap - s.innerR)).toBeCloseTo(innerSpan(s.innerR, s.bore));
+    expect(slider.hi[1] - (c.dims.gap - s.innerR)).toBeCloseTo(innerSpan(s.innerR, s.arm));
   });
   it('makes the grip run outward from the outer bar, away from the pot', () => {
     const s = spec(), c = caliperParts(s), yoke = box(c.yoke);
@@ -98,6 +98,20 @@ describe('caliperParts', () => {
     it('wraps the rail with 0.3 mm of clearance on each side and leaves the cover plate over it', () => {
       expect(c.dims.bridge).toBeCloseTo(10 + 2 * 0.3);
       expect(c.dims.coverZ).toBeCloseTo(7.6 + 0.3);
+    });
+  });
+
+  describe('the inner arm', () => {
+    it('takes the width it is given, with a 3 mm gap to the roller, so a thinner arm needs less room in the pot', () => {
+      const thin = caliperParts(spec({ arm: 6 })), wide = caliperParts(spec({ arm: 14.2 }));
+      expect(box(wide.slider).hi[1] - box(thin.slider).hi[1]).toBeCloseTo(14.2 - 6);
+      expect(innerSpan(17, 8)).toBeCloseTo(34 + INNER_GAP + 8);
+      expect(INNER_GAP).toBe(3);
+    });
+    it('keeps every part closed and printable at the thinnest width', () => {
+      const c = caliperParts(spec({ arm: 5 }));
+      for (const p of [c.yoke, c.slider]) { expect(closed(p)).toBe(true); expect(volume(p)).toBeGreaterThan(0); }
+      expect(overhangs(c.yoke)).toBe(0);
     });
   });
 });

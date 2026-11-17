@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FOOT, HEAD, OPEN, innerSpan } from './caliper';
+import { ARM, FOOT, HEAD, OPEN, innerSpan } from './caliper';
 import { fitSupport } from './support';
 
 const mug = { name: 'Mug', profile: [{ z: 0, d: 80 }, { z: 95, d: 80 }] };
@@ -48,7 +48,7 @@ describe('fitSupport', () => {
     it('says narrow, and what it needs, when the diameter it is given can\'t pass the pot\'s mouth', () => {
       const f = fitSupport(mug, band, 6, 8.2, { diameter: 48 });
       expect(f.state).toBe('narrow');
-      expect(f.needs).toBeCloseTo(innerSpan(24, 8.2) + OPEN + 3);
+      expect(f.needs).toBeCloseTo(innerSpan(24, ARM) + OPEN + 3);
       expect(f.needs).toBeGreaterThan(f.opening);
     });
     it('reaches past the band at either end, and falls short of it with a negative number', () => {
@@ -65,5 +65,15 @@ describe('fitSupport', () => {
     it('says short when the reach leaves under 15 mm of roller', () => {
       expect(fitSupport(mug, band, 6, 8.2, { below: -20, above: -10 }).state).toBe('short');
     });
+  });
+
+  it('lets a thinner inner arm pass a narrower mouth, where a wide one is too wide', () => {
+    // The mouth is 40 mm inside. The 14.2 mm arm needs more than that with the rollers open, and the 6 mm arm doesn't.
+    const narrow = { name: 'Narrow', profile: [{ z: 0, d: 52 }, { z: 95, d: 52 }] };
+    expect(fitSupport(narrow, band, 6, 8.2, { arm: 14.2 }).state).toBe('narrow');
+    const thin = fitSupport(narrow, band, 6, 8.2, { arm: 6 });
+    expect(thin.state).toBe('ok');
+    expect(thin.diameter).toBeCloseTo(20);
+    expect(fitSupport(narrow, band, 6, 8.2).diameter).toBeCloseTo(40 - (3 + ARM + OPEN + 3));
   });
 });

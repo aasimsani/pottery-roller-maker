@@ -209,7 +209,7 @@ export function finishRoller(s: Settings, { gp, maskLayers, layerInfo, band, rol
   else if (s.support && s.bore <= 0) supportState = 'no-bore';
   else if (s.support && roller.outline && roller.maxD - roller.minD > 0.5) supportState = 'shaped';
   else if (s.support) {
-    const fit = fitSupport(s.piece, band, s.clay, s.bore, { diameter: s.supportD, below: s.supportBelow, above: s.supportAbove });
+    const fit = fitSupport(s.piece, band, s.clay, s.bore, { diameter: s.supportD, below: s.supportBelow, above: s.supportAbove, arm: s.supportArm });
     supportState = fit.state; opening = fit.opening; needs = fit.needs;
     if (fit.state === 'ok') {
       // A smooth roller needs no fine mesh, so 0.8 mm keeps the file small.
@@ -217,7 +217,7 @@ export function finishRoller(s: Settings, { gp, maskLayers, layerInfo, band, rol
       const drum = drumParts(FLAT, smooth, s.build), rim = s.piece.profile[s.piece.profile.length - 1].z;
       const c = caliperParts({
         outerR: roller.maxD / 2, outerFrom: wallAt(s.piece, band.start - s.ends).z, outerTo: wallAt(s.piece, band.start + band.slant + s.ends).z,
-        innerR: fit.diameter / 2, innerFrom: fit.fromZ, innerTo: fit.toZ, rim, clay: s.clay, sink: s.use === 'texture' ? s.depth : 0.05, bore: s.bore, grip: s.grip,
+        innerR: fit.diameter / 2, innerFrom: fit.fromZ, innerTo: fit.toZ, rim, clay: s.clay, sink: s.use === 'texture' ? s.depth : 0.05, bore: s.bore, grip: s.grip, arm: s.supportArm,
       });
       const size = extent(c.yoke);
       if (!packPlate([[size[0], size[1]]], s.bedW, s.bedD, 0, BED_MARGIN)) supportState = 'too-big';

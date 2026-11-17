@@ -2,7 +2,7 @@
 // the outside, so soft clay takes the pattern and the pot keeps its shape. The caliper holds both rollers on parallel
 // axles, so the support roller is a plain cylinder.
 import { END_CLEARANCE } from './handle';
-import { FOOT, HEAD, OPEN, innerSpan } from './caliper';
+import { ARM, FOOT, HEAD, INNER_GAP, OPEN, innerSpan } from './caliper';
 import { surfaceLength, wallAt, type Piece } from './piece';
 import type { WallPoint } from './shape';
 
@@ -27,7 +27,7 @@ export interface SupportFit {
 }
 
 /** What the person can adjust. A diameter of 0 lets the fit pick one. Below and above reach past the band's edges, and a negative number falls short of them, in mm. */
-export interface SupportOptions { diameter?: number; below?: number; above?: number }
+export interface SupportOptions { diameter?: number; below?: number; above?: number; arm?: number }
 
 // innerAt() is the point on the inside of the wall behind the point s mm along the outside. It lies one clay
 // thickness in from the outside, square to the wall.
@@ -41,7 +41,7 @@ function innerAt(piece: Piece, s: number, clay: number): WallPoint {
 // pass through the pot's mouth with the rollers open, unless the person sets one.
 // ponytail: the axles are treated as upright. A strongly tapered pot leans them a few degrees, so the roller touches
 // the wall along a line and not a band, and the print check's taper warning already says so.
-export function fitSupport(piece: Piece, band: { start: number; slant: number }, clay: number, bore: number, o: SupportOptions = {}): SupportFit {
+export function fitSupport(piece: Piece, band: { start: number; slant: number }, clay: number, _bore: number, o: SupportOptions = {}): SupportFit {
   const base = piece.profile[0].z, S = surfaceLength(piece);
   const lowest = base + clay + HEAD + FLOOR_AIR + FOOT + END_CLEARANCE;
   // The reach moves the roller's two ends along the pot's surface, and the pot's floor and rim stop them.
@@ -58,8 +58,8 @@ export function fitSupport(piece: Piece, band: { start: number; slant: number },
   let opening = Infinity;
   for (let s = from; s <= S; s += 1) opening = Math.min(opening, 2 * innerAt(piece, s, clay).r);
   opening = Math.min(opening, 2 * innerAt(piece, S, clay).r);
-  const given = o.diameter && o.diameter > 0 ? Math.max(MIN_D, o.diameter) : 0, around = innerSpan(0, bore) + OPEN + AIR;
-  const needs = innerSpan((given || MIN_D) / 2, bore) + OPEN + AIR, want = given || Math.min(opening / 2, opening - around, MAX_D);
+  const given = o.diameter && o.diameter > 0 ? Math.max(MIN_D, o.diameter) : 0, arm = o.arm ?? ARM, around = INNER_GAP + arm + OPEN + AIR;
+  const needs = innerSpan((given || MIN_D) / 2, arm) + OPEN + AIR, want = given || Math.min(opening / 2, opening - around, MAX_D);
   const length = wall.length ? wall[wall.length - 1].z - wall[0].z : 0, none = { opening, needs, diameter: 0, length, fromZ: 0, toZ: 0 };
   if (length < MIN_LENGTH) return { state: 'short', ...none };
   if (want < MIN_D || needs > opening) return { state: 'narrow', ...none };

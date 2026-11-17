@@ -178,4 +178,12 @@ describe('inside support', () => {
     expect(r.checks.map((c) => c.id)).toContain('support-shaped');
     expect(r.support).toBeUndefined();
   });
+  it('follows the inner arm\'s width, so a thinner arm gets into a narrower pot', () => {
+    const narrow = { name: 'Narrow', profile: [{ z: 0, d: 52 }, { z: 95, d: 52 }] };
+    const base = { ...s, piece: narrow, support: true, laps: 1, bandFrom: 20, bandTo: 70 };
+    const wide = computeRoller({ ...base, supportArm: 14.2 }, [newLinesLayer()], new Map());
+    expect(wide.support).toBeUndefined();
+    expect(wide.checks.map((c) => c.id)).toContain('support-narrow');
+    expect(computeRoller({ ...base, supportArm: 6 }, [newLinesLayer()], new Map()).support).toBeDefined();
+  });
 });
