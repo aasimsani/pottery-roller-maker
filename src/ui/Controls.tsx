@@ -145,6 +145,24 @@ export function Controls({ s, set, result, onPhoto, onScale }: { s: Settings; se
         )}
       </Section>
 
+      <Section title="Inside support">
+        <CheckField label="Print a caliper that holds a smooth roller inside the pot, opposite the texture roller" value={s.support} onChange={(v) => set('support', v)} />
+        {s.support && (
+          <>
+            <p className="hint">Soft clay gives way when a roller presses on it. The caliper straddles the rim: the texture roller rides outside the wall, and a slider on the beam over the rim carries a smooth roller inside it. One hand on the grip holds both rollers on the wall. The caliper replaces the separate handle.</p>
+            <NumberField label="Clay wall thickness" unit="mm" value={s.clay} min={2} max={20} step={0.5} onChange={(v) => set('clay', v)} />
+            <NumberField label="Support roller diameter" unit="mm" value={s.supportD} min={0} max={90} step={1} onChange={(v) => set('supportD', v)} />
+            <p className="hint">0 lets the app pick the widest roller that leaves the slider room to pass through the pot's mouth, up to 45 mm{result?.support && s.supportD === 0 ? `, which is Ø${result.support.diameter.toFixed(0)} mm here` : ''}. The smallest is 18 mm.</p>
+            <NumberField label="Inner arm width" unit="mm" value={s.supportArm} min={5} max={14} step={0.5} onChange={(v) => set('supportArm', v)} />
+            <p className="hint">The arm that hangs down inside the pot. A thinner arm passes a narrower mouth, so the smooth roller can be wider in a small pot. It is also weaker, so keep it at 8 mm or more unless the pot needs it.</p>
+            <NumberField label="Reach below the band" unit="mm" value={s.supportBelow} min={-40} max={40} step={1} onChange={(v) => set('supportBelow', v)} />
+            <NumberField label="Reach above the band" unit="mm" value={s.supportAbove} min={-40} max={40} step={1} onChange={(v) => set('supportAbove', v)} />
+            <p className="hint">0 makes the smooth roller cover the same stretch of wall as the texture roller. A positive number reaches past the band, and a negative number falls short of it. The floor and the rim stop it.</p>
+            {result?.support && <p className="hint">The smooth roller is Ø{result.support.diameter.toFixed(0)} × {result.support.length.toFixed(0)} mm and covers the inside from {result.support.fromZ.toFixed(0)} to {result.support.toZ.toFixed(0)} mm above the table. The beam sits {result.support.beamBottom.toFixed(0)} mm up, over the rim. The yoke is {result.support.size[0].toFixed(0)} × {result.support.size[1].toFixed(0)} mm and prints flat. The slider's pin locks the axles {result.support.positions.map((p) => p.toFixed(1)).join(', ')} mm apart, and the file sets {result.support.gap.toFixed(1)} mm. Widen it to lower the tool over the rim, then close it on the wall.</p>}
+          </>
+        )}
+      </Section>
+
       <Section title="Print">
         <NumberField label="Nozzle" unit="mm" value={s.nozzle} min={0.1} max={1.2} step={0.05} onChange={setNozzle} />
         <div className="seg" role="group" aria-label="Common nozzles">

@@ -6,7 +6,7 @@ import { geometry } from './core/geometry';
 import type { WorkerReply, WorkerRequest } from './roller.worker';
 import { artHistogram, loadArt, refKey, type Art } from './render/art';
 import { otsuThreshold } from './core/threshold';
-import { exportName } from './export';
+import { exportName, plateParts } from './export';
 import { svgDataUrl, type DesignRef } from './sources/types';
 import { fetchIconSvg, iconSvgThumb } from './sources/iconify';
 import { Controls } from './ui/Controls';
@@ -20,7 +20,7 @@ import { PlatePanel } from './ui/PlatePanel';
 import { Drawer } from './ui/Drawer';
 import { ConnectClaude } from './ui/ConnectClaude';
 import { makeHandlers } from './mcp/tab';
-import { plate3mf, type PlatePart } from './core/plate';
+import { plate3mf, splitPlates, type PlatePart } from './core/plate';
 
 const download = (blob: Blob, name: string) => {
   const a = document.createElement('a');
@@ -132,16 +132,17 @@ export function App() {
   // The worker hands the STL over, so each download and plate part gets its own copy.
   const onStl = () => { if (result) download(new Blob([result.stl.slice(0)], { type: 'model/stl' }), `${baseName}.stl`); };
   // With the handle on, the roller travels with its handle and axle, so one plate prints the whole tool.
-  const allParts = (r: RollerResult) => [{ name: baseName, stl: r.stl.slice(0) },
-    ...(r.handle ? [{ name: `${baseName}_handle`, stl: r.handle.stl.slice(0) }, { name: `${baseName}_axle`, stl: r.handle.axleStl.slice(0) }] : [])];
-  const onAddToPlate = () => { if (result) setPlate((p) => [...p, ...allParts(result)]); };
-  // A plate that doesn't fit the bed falls back to one STL per part.
-  const onAll = async () => {
-    if (!result) return;
-    const parts = allParts(result), zip = await plate3mf(parts, s.bedW, s.bedD);
-    if (zip) download(new Blob([zip as BlobPart], { type: 'model/3mf' }), `${baseName}_with-handle.3mf`);
-    else for (const p of parts) download(new Blob([p.stl], { type: 'model/stl' }), `${p.name}.stl`);
+  const onAddToPlate = () => { if (result) setPlate((p) => [...p, ...plateParts(baseName, result)]); };
+  // Parts that don't fit one plate go on as many plates as they need, and a part too big for any plate downloads as an STL.
+  const savePlate = async (parts: PlatePart[], name: string) => {
+    const groups = splitPlates(parts, s.bedW, s.bedD);
+    for (const [k, group] of groups.entries()) {
+      const zip = await plate3mf(group, s.bedW, s.bedD);
+      if (zip) download(new Blob([zip as BlobPart], { type: 'model/3mf' }), groups.length > 1 ? name.replace(/\.3mf$/, `_plate-${k + 1}.3mf`) : name);
+      else for (const p of group) download(new Blob([p.stl], { type: 'model/stl' }), `${p.name}.stl`);
+    }
   };
+  const onAll = () => { if (result) void savePlate(plateParts(baseName, result), `${baseName}_${result.support ? 'with-caliper' : 'with-handle'}.3mf`); };
   // A traced piece gets a band over its middle 80%, ready to adjust.
   const usePhotoPiece = (piece: Piece) => {
     const S = surfaceLength(piece);

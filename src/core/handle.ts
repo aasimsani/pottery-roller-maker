@@ -8,8 +8,12 @@ export const END_CLEARANCE = 0.6;
 /** The axle is this much thinner than the roller's hole, so the roller spins on it, in mm. */
 export const AXLE_PLAY = 0.4;
 /** The arms' holes are this much wider than the axle, so it pushes in snugly and stays put, in mm. */
-const ARM_FIT = 0.2;
-const GRIP_WIDTH = 22;
+export const ARM_FIT = 0.2;
+export const GRIP_WIDTH = 22;
+/** The space between the roller and the bar that joins the arms, in mm. */
+export const BACK_GAP = 6;
+/** The arms and the bar are square in section, and this wide, in mm. */
+export const armSide = (bore: number) => Math.max(14, bore + 6);
 
 // flipIfInside() reverses every triangle when the mesh's volume comes out negative, so its normals point out.
 function flipIfInside(m: Mesh): Mesh {
@@ -17,7 +21,7 @@ function flipIfInside(m: Mesh): Mesh {
   return m;
 }
 
-function box(x0: number, x1: number, y0: number, y1: number, z0: number, z1: number): Mesh {
+export function box(x0: number, x1: number, y0: number, y1: number, z0: number, z1: number): Mesh {
   const positions = new Float32Array(24);
   for (let k = 0; k < 8; k++) positions.set([k & 1 ? x1 : x0, k & 2 ? y1 : y0, k & 4 ? z1 : z0], k * 3);
   const quads = [[0, 4, 6, 2], [1, 3, 7, 5], [0, 1, 5, 4], [2, 6, 7, 3], [0, 2, 3, 1], [4, 5, 7, 6]];
@@ -38,8 +42,8 @@ function teardrop(r: number): { angle: number; at: [number, number] }[] {
 
 // holedBlock() is the end of one arm: a square bar along x with a teardrop hole through it. The square and the hole
 // share one set of angles from the hole's centre, so the bar's ends are rings of quads with no gaps.
-function holedBlock(x0: number, x1: number, side: number, r: number): Mesh {
-  const hole = teardrop(r), n = hole.length, a = side / 2, cy = 0, cz = side / 2;
+export function holedBlock(x0: number, x1: number, side: number, r: number, cy = 0): Mesh {
+  const hole = teardrop(r), n = hole.length, a = side / 2, cz = side / 2;
   const outer = hole.map(({ angle }) => {
     const c = Math.cos(angle), s = Math.sin(angle), k = a / Math.max(Math.abs(c), Math.abs(s));
     return [c * k, s * k] as [number, number];
@@ -64,8 +68,8 @@ function holedBlock(x0: number, x1: number, side: number, r: number): Mesh {
 // The roller sits between the two arms. The axle passes through the arms and the roller along x, at y = 0.
 // ponytail: the fork's parts overlap by 0.5 mm and the slicer unions them, the same as the drum's spokes.
 export function handleParts(h: HandleSpec): { fork: Mesh[]; axle: Mesh } {
-  const axleD = h.bore - AXLE_PLAY, side = Math.max(14, h.bore + 6), gap = h.rollerLength + 2 * END_CLEARANCE;
-  const r = (axleD + ARM_FIT) / 2, x = gap / 2, yb = h.rollerDiameter / 2 + 6;
+  const axleD = h.bore - AXLE_PLAY, side = armSide(h.bore), gap = h.rollerLength + 2 * END_CLEARANCE;
+  const r = (axleD + ARM_FIT) / 2, x = gap / 2, yb = h.rollerDiameter / 2 + BACK_GAP;
   const fork = [
     holedBlock(-x - side, -x, side, r),
     holedBlock(x, x + side, side, r),

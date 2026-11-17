@@ -7,7 +7,8 @@ import { applyOps, OpError, type DesignState, type Op } from './ops';
 import { builtinRef, searchBuiltin } from '../sources/builtin';
 import { searchIconify } from '../sources/iconify';
 import { capture3d } from '../ui/scene';
-import { plate3mf } from '../core/plate';
+import { plate3mf, splitPlates } from '../core/plate';
+import { plateParts } from '../export';
 import { setViewMode } from './viewMode';
 import { shrinkImage } from '../render/shrink';
 import { listSpots, thinOnRoller } from '../core/fix';
@@ -49,12 +50,17 @@ const found = new Map<string, DesignRef>();
 // A shaped roller's outline is hundreds of numbers that Claude never reads, so replies leave it out.
 const withoutOutline = ({ outline: _outline, ...roller }: RollerResult['roller']) => roller;
 
+// supportSummary() is the inside support in numbers, without its STLs: the smooth roller's diameter and length, the heights
+// inside the pot that it covers, the beam's height over the rim, the distance between the axles with every distance the
+// slider locks at, and the yoke's size lying flat, all in mm.
+const supportSummary = ({ diameter, length, fromZ, toZ, beamBottom, gap, positions, size }: NonNullable<RollerResult['support']>) => ({ diameter, length, fromZ, toZ, beamBottom, gap, positions, yoke: size });
+
 export function makeHandlers(api: TabApi): Record<string, Handler> {
   const summary = () => {
     const { s, layers, result: r, error } = api.get();
     return {
       ...(error ? { error } : {}),
-      roller: r && withoutOutline(r.roller), grams: r && Math.round(r.grams), otherBuildGrams: r && Math.round(r.otherGrams), build: s.build.kind,
+      roller: r && withoutOutline(r.roller), ...(r?.support ? { support: supportSummary(r.support) } : {}), grams: r && Math.round(r.grams), otherBuildGrams: r && Math.round(r.otherGrams), build: s.build.kind,
       checks: r?.checks ?? [], fixed: r?.fixed,
       layers: layers.map((l) => ({ id: l.id, name: l.name, kind: l.kind, visible: l.visible, repeatsRoundPot: r?.layerInfo.get(l.id)?.repeats })),
     };
@@ -186,11 +192,16 @@ export function makeHandlers(api: TabApi): Record<string, Handler> {
       let blob: Blob;
       if (format === 'stl') blob = new Blob([result.stl.slice(0)], { type: 'model/stl' });
       else if (format === '3mf') {
-        // The plate carries the handle and the axle too, when the handle is on.
-        const parts = [{ name, stl: result.stl.slice(0) }, ...(result.handle ? [{ name: `${name}_handle`, stl: result.handle.stl.slice(0) }, { name: `${name}_axle`, stl: result.handle.axleStl.slice(0) }] : [])];
-        const zip = await plate3mf(parts, s.bedW, s.bedD);
-        if (!zip) throw new Error('The roller and its handle don\'t fit on one plate. Shorten the grip, or export the STL.');
-        blob = new Blob([zip as BlobPart], { type: 'model/3mf' });
+        // The plate carries the handle, the axle and the inside support too, when they are on.
+        // Parts that overflow one bed go on more plates, and each plate downloads as its own file.
+        const groups = splitPlates(plateParts(name, result), s.bedW, s.bedD), files: string[] = [];
+        for (const [k, group] of groups.entries()) {
+          const zip = await plate3mf(group, s.bedW, s.bedD);
+          if (!zip) throw new Error('A part is bigger than the bed. Shorten the grip, or export the STL.');
+          const file = groups.length > 1 ? `${name}_plate-${k + 1}.3mf` : `${name}.3mf`;
+          api.download(new Blob([zip as BlobPart], { type: 'model/3mf' }), file); files.push(file);
+        }
+        return { files, savedTo: 'the browser\'s downloads folder' };
       }
       else blob = await new Promise<Blob>((ok, fail) => flatCanvas()?.toBlob((b) => (b ? ok(b) : fail(new Error('No flat preview.')))) ?? fail(new Error('No flat preview.')));
       api.download(blob, `${name}.${format}`);

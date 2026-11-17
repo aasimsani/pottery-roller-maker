@@ -31,6 +31,11 @@ tool forks the closest existing app rather than starting fresh.
   build (a spoked bottom plate and a 45° cone roof, so no layer starts in mid-air), the filament estimate, and the STL writer.
 - `src/core/handle.ts` builds the optional handle, a U-shaped handle that prints flat with teardrop axle holes, and an
   axle that prints standing on its head. The pipeline adds both to the result, and the plate and the Print file view carry them.
+- `src/core/support.ts` sizes the optional inside support, a smooth cylinder that backs a soft wall up from inside the
+  pot. `src/core/caliper.ts` builds the tool that holds it: a yoke with the texture roller's arms, the grip and a rail over
+  the rim, a slider that rides on the rail and carries the smooth roller, two axles and a locking pin. When the support
+  is on, the caliper replaces the separate handle. `splitPlates()` in `src/core/plate.ts` spreads the parts over as many
+  plates as the bed needs.
 - `src/core/fix.ts` finds thin raised lines and narrow gaps on the wrapping pattern, and repairs them when the user
   picks a fix.
 - Spot fixes: `src/ui/SpotFixer.tsx` turns a click on the flat view into a fix for one flagged spot, saved in
